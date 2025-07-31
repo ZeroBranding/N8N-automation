@@ -33,6 +33,18 @@ import base64
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# API-Keys für kostenlose Services (bereits konfiguriert)
+ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API_KEY', 'sk_faa57e7fd7fd6bd7a3a87ef4e61def25bf11a40fa37a78f8')
+DID_API_KEY = os.getenv('DID_API_KEY', 'bGl5YW5hMjQwNDI1QGdtYWlsLmNvbQ:vwN8h2sCY0it7Fh_C-12s')
+UNSPLASH_API_KEY = os.getenv('UNSPLASH_API_KEY', 'gg8vh2gTZFie-4fnnQFFzjhGHHx3g0cGFa_d6fItlI8')
+REMOVEBG_API_KEY = os.getenv('REMOVEBG_API_KEY', 'JBGum7M56fqR2qeuH8Y2jkHD')
+CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME', 'your_cloud_name_here')
+CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY', '252141343855898')
+CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET', 'xpQlYkFIsd5hLrLO1QHEceWXj60')
+HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY', 'your_huggingface_api_key_here')
+STABILITY_API_KEY = os.getenv('STABILITY_API_KEY', 'your_stability_api_key_here')
+REPLICATE_API_KEY = os.getenv('REPLICATE_API_KEY', 'your_replicate_api_key_here')
+
 class ExtendedSocialMediaAutomation:
     def __init__(self, headless=True):
         """Initialisiert den Web Driver"""
