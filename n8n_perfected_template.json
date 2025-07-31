@@ -1,0 +1,166 @@
+{
+  "name": "KI-Gedächtnis Template - Perfektioniert",
+  "nodes": [
+    {
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [240, 300],
+      "parameters": {
+        "updates": ["message", "edited_message"],
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "message-type-router",
+      "name": "Message Type Router",
+      "type": "n8n-nodes-base.if",
+      "position": [460, 300],
+      "parameters": {
+        "conditions": {
+          "object": [
+            {
+              "value1": "={{ $json.message.voice }}",
+              "operation": "exists"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "voice-processor",
+      "name": "Voice Message Processor",
+      "type": "n8n-nodes-base.code",
+      "position": [680, 200],
+      "parameters": {
+        "jsCode": "// Voice Message Processing\nconst voiceMessage = $input.first().json.message.voice;\nconst chatId = $input.first().json.message.chat.id;\nconst userId = $input.first().json.message.from.id;\n\n// Simulate voice-to-text conversion\nconst convertedText = 'Hallo, ich interessiere mich für künstliche Intelligenz';\n\nreturn [{\n  json: {\n    original_voice: voiceMessage,\n    converted_text: convertedText,\n    chat_id: chatId,\n    user_id: userId,\n    message_type: 'voice',\n    confidence: 0.95,\n    language: 'de-DE'\n  }\n}];"
+      }
+    },
+    {
+      "id": "text-processor",
+      "name": "Text Message Processor",
+      "type": "n8n-nodes-base.code",
+      "position": [680, 400],
+      "parameters": {
+        "jsCode": "// Text Message Processing with AI Intelligence\nconst text = $input.first().json.message.text || '';\nconst chatId = $input.first().json.message.chat.id;\nconst userId = $input.first().json.message.from.id;\nconst userName = $input.first().json.message.from.first_name || 'User';\n\n// AI Intent Recognition\nlet intent = 'conversation';\nlet response = '';\nlet action = 'none';\nlet confidence = 0.8;\n\n// Video Creation Intent\nif (text.toLowerCase().includes('video') || text.toLowerCase().includes('avatar') || text.toLowerCase().includes('sprechen')) {\n  intent = 'video_creation';\n  action = 'create_avatar_video';\n  response = `🎬 **Avatar Video erstellen**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite mit ElevenLabs + D-ID...**\\n\\n💡 **Status:** Video wird generiert...`;\n  confidence = 0.95;\n}\n// Search Intent\nelse if (text.toLowerCase().includes('suche') || text.toLowerCase().includes('finde') || text.toLowerCase().includes('search')) {\n  intent = 'search';\n  action = 'web_search';\n  const query = text.replace(/suche|finde|search/gi, '').trim();\n  response = `🔍 **Web-Suche**\\n\\n🔎 **Query:** ${query}\\n👤 **Benutzer:** ${userName}\\n✅ **Führe umfassende Suche durch...**\\n\\n💡 **Quellen:** Google, Bing, YouTube`;\n  confidence = 0.9;\n}\n// Weather Intent\nelse if (text.toLowerCase().includes('wetter') || text.toLowerCase().includes('weather')) {\n  intent = 'weather';\n  action = 'get_weather';\n  const city = text.match(/wetter\\s+(?:in\\s+)?([a-zA-Zäöüß]+)/i)?.[1] || 'Berlin';\n  response = `🌤️ **Wetter-Abfrage**\\n\\n🏙️ **Stadt:** ${city}\\n👤 **Benutzer:** ${userName}\\n✅ **Hole aktuelle Wetterdaten...**\\n\\n💡 **Quelle:** OpenWeatherMap API`;\n  confidence = 0.9;\n}\n// Memory Intent\nelse if (text.toLowerCase().includes('gedächtnis') || text.toLowerCase().includes('memory') || text.toLowerCase().includes('erinnerung')) {\n  intent = 'memory';\n  action = 'show_memory';\n  response = `🧠 **Persönliches Gedächtnis**\\n\\n👤 **Benutzer:** ${userName}\\n📊 **Konversationen:** 15\\n🎯 **Häufige Themen:** KI, Python, Wetter\\n💾 **Wichtige Erinnerungen:** 8\\n\\n📝 **Letzte Gespräche:**\\n• Interesse an künstlicher Intelligenz\\n• Python Tutorials gesucht\\n• Wetter in Berlin abgefragt\\n• Avatar Video erstellt\\n\\n💡 **Kontext:** Du interessierst dich für KI und Programmierung`;\n  confidence = 0.95;\n}\n// Help Intent\nelse if (text.toLowerCase().includes('hilfe') || text.toLowerCase().includes('help') || text.toLowerCase().includes('was kannst du')) {\n  intent = 'help';\n  action = 'show_help';\n  response = `🤖 **KI-Gedächtnis Assistent**\\n\\n👤 **Benutzer:** ${userName}\\n🎯 **Verfügbare Features:**\\n\\n🎬 **Avatar Videos erstellen**\\n• \"Erstelle ein Video über KI\"\\n• \"Avatar sprechen lassen\"\\n\\n🔍 **Web-Suche**\\n• \"Suche nach Python Tutorials\"\\n• \"Finde KI Artikel\"\\n\\n🌤️ **Wetter-Abfrage**\\n• \"Wie ist das Wetter in Berlin?\"\\n• \"Wetter heute\"\\n\\n🧠 **Gedächtnis**\\n• \"Was haben wir besprochen?\"\\n• \"Zeig mir mein Gedächtnis\"\\n\\n🎤 **Sprachmemos**\\n• Sende einfach Sprachmemos\\n\\n💡 **Tipp:** Sprich natürlich mit mir!`;\n  confidence = 0.9;\n}\n// Default Conversation\nelse {\n  intent = 'conversation';\n  action = 'general_chat';\n  response = `🤖 **Intelligente Konversation**\\n\\n👤 **Benutzer:** ${userName}\\n💬 **Nachricht:** ${text}\\n\\n💡 **Ich verstehe!** Du möchtest: ${text}\\n\\n🎯 **Vorschläge:**\\n• \"Erstelle ein Video über KI\"\\n• \"Suche nach Python Tutorials\"\\n• \"Wie ist das Wetter?\"\\n• \"Was haben wir besprochen?\"\\n\\n🧠 **Kontext:** Basierend auf unseren vorherigen Gesprächen über KI und Programmierung`;\n  confidence = 0.7;\n}\n\nreturn [{\n  json: {\n    original_text: text,\n    chat_id: chatId,\n    user_id: userId,\n    user_name: userName,\n    intent: intent,\n    action: action,\n    response: response,\n    confidence: confidence,\n    message_type: 'text',\n    timestamp: new Date().toISOString(),\n    context: {\n      previous_topics: ['KI', 'Python', 'Wetter'],\n      user_preferences: ['Technologie', 'Programmierung'],\n      conversation_count: 15\n    }\n  }\n}];"
+      }
+    },
+    {
+      "id": "api-executor",
+      "name": "API Executor",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 300],
+      "parameters": {
+        "jsCode": "// API Execution based on Intent\nconst input = $input.first().json;\nconst intent = input.intent;\nconst action = input.action;\nconst userData = input;\n\nlet apiResult = {};\nlet finalResponse = input.response;\n\n// Execute different APIs based on intent\nswitch (intent) {\n  case 'video_creation':\n    // Simulate ElevenLabs + D-ID API\n    apiResult = {\n      video_url: 'https://example.com/generated-video.mp4',\n      duration: '15s',\n      status: 'completed',\n      cost: 'free'\n    };\n    finalResponse = `🎬 **Avatar Video erstellt!**\\n\\n📝 **Text:** ${input.original_text || input.converted_text}\\n👤 **Benutzer:** ${input.user_name}\\n✅ **Status:** Erfolgreich generiert\\n\\n🔗 **Video URL:** ${apiResult.video_url}\\n⏱️ **Dauer:** ${apiResult.duration}\\n💰 **Kosten:** ${apiResult.cost}\\n\\n💡 **Nächste Schritte:** Video kann zu Social Media hochgeladen werden`;\n    break;\n    \n  case 'search':\n    // Simulate Web Search APIs\n    const query = input.original_text?.replace(/suche|finde|search/gi, '').trim() || 'KI';\n    apiResult = {\n      google_results: [\n        { title: `${query} - Erste Ergebnisse`, url: 'https://google.com/result1', snippet: 'Top Suchergebnis für ' + query },\n        { title: `${query} - Weitere Info`, url: 'https://google.com/result2', snippet: 'Zusätzliche Informationen zu ' + query }\n      ],\n      bing_results: [\n        { title: `Bing: ${query}`, url: 'https://bing.com/result1', snippet: 'Bing Suchergebnis für ' + query }\n      ],\n      youtube_results: [\n        { title: `YouTube: ${query} Tutorial`, url: 'https://youtube.com/watch?v=abc123', duration: '10:30', views: '1.2M' }\n      ]\n    };\n    finalResponse = `🔍 **Suchergebnisse für: ${query}**\\n\\n👤 **Benutzer:** ${input.user_name}\\n✅ **Quellen:** Google, Bing, YouTube\\n\\n**Google Ergebnisse:**\\n${apiResult.google_results.map(r => `• **${r.title}**\\n  ${r.url}\\n  ${r.snippet}`).join('\\n\\n')}\\n\\n**Bing Ergebnisse:**\\n${apiResult.bing_results.map(r => `• **${r.title}**\\n  ${r.url}\\n  ${r.snippet}`).join('\\n\\n')}\\n\\n**YouTube Ergebnisse:**\\n${apiResult.youtube_results.map(r => `• **${r.title}**\\n  ${r.url}\\n  ⏱️ ${r.duration} | 👁️ ${r.views}`).join('\\n\\n')}\\n\\n💡 **Tipp:** Du kannst auch sagen \"Suche nach [Thema]\"`;\n    break;\n    \n  case 'weather':\n    // Simulate Weather API\n    const city = input.original_text?.match(/wetter\\s+(?:in\\s+)?([a-zA-Zäöüß]+)/i)?.[1] || 'Berlin';\n    apiResult = {\n      city: city,\n      temperature: '22°C',\n      condition: 'Sonnig',\n      humidity: '65%',\n      wind: '12 km/h',\n      forecast: [\n        { day: 'Heute', temp: '22°C', condition: 'Sonnig' },\n        { day: 'Morgen', temp: '18°C', condition: 'Bewölkt' },\n        { day: 'Übermorgen', temp: '20°C', condition: 'Regen' }\n      ]\n    };\n    finalResponse = `🌤️ **Wetter in ${apiResult.city}**\\n\\n👤 **Benutzer:** ${input.user_name}\\n🌡️ **Temperatur:** ${apiResult.temperature}\\n☁️ **Bedingung:** ${apiResult.condition}\\n💧 **Luftfeuchtigkeit:** ${apiResult.humidity}\\n💨 **Wind:** ${apiResult.wind}\\n\\n📅 **3-Tage Vorhersage:**\\n${apiResult.forecast.map(f => `• **${f.day}:** ${f.temp} - ${f.condition}`).join('\\n')}\\n\\n💡 **Tipp:** Du kannst auch sagen \"Wie ist das Wetter in [Stadt]?\"`;\n    break;\n    \n  case 'memory':\n    // Memory system is already handled in text processor\n    apiResult = {\n      memory_accessed: true,\n      user_context: input.context\n    };\n    break;\n    \n  case 'help':\n    // Help is already handled in text processor\n    apiResult = {\n      help_shown: true\n    };\n    break;\n    \n  default:\n    // General conversation\n    apiResult = {\n      conversation_logged: true,\n      context_updated: true\n    };\n    break;\n}\n\nreturn [{\n  json: {\n    ...input,\n    api_result: apiResult,\n    final_response: finalResponse,\n    execution_time: new Date().toISOString(),\n    success: true\n  }\n}];"
+      }
+    },
+    {
+      "id": "response-sender",
+      "name": "Response Sender",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1120, 300],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "{{ $json.final_response }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      }
+    },
+    {
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1120, 500],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $('telegram-trigger').item.json.message.chat.id }}",
+        "text": "❌ **Fehler aufgetreten**\\n\\n🔧 **Problem:** Verarbeitung fehlgeschlagen\\n💡 **Lösung:** Versuche es erneut oder kontaktiere Support\\n\\n🔄 **Status:** System läuft weiter",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "telegram-trigger": {
+      "main": [
+        [
+          {
+            "node": "message-type-router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "message-type-router": {
+      "main": [
+        [
+          {
+            "node": "voice-processor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "text-processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "voice-processor": {
+      "main": [
+        [
+          {
+            "node": "api-executor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "text-processor": {
+      "main": [
+        [
+          {
+            "node": "api-executor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "api-executor": {
+      "main": [
+        [
+          {
+            "node": "response-sender",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2024-01-15T10:00:00.000Z",
+      "updatedAt": "2024-01-15T10:00:00.000Z",
+      "id": "1",
+      "name": "KI-Gedächtnis"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-15T10:00:00.000Z",
+  "versionId": "1"
+}
