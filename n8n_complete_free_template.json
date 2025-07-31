@@ -1,125 +1,86 @@
 {
-  "name": "Komplette kostenlose Social Media & E-Mail Automation",
+  "name": "🆓 Komplette kostenlose Social Media & E-Mail Automation",
   "nodes": [
     {
-      "parameters": {
-        "updates": [
-          {
-            "name": "message",
-            "value": "={{ $json.message.text }}"
-          },
-          {
-            "name": "chat_id",
-            "value": "={{ $json.chat.id }}"
-          },
-          {
-            "name": "user_id",
-            "value": "={{ $json.from.id }}"
-          },
-          {
-            "name": "username",
-            "value": "={{ $json.from.username }}"
-          }
-        ]
-      },
       "id": "telegram-trigger",
       "name": "Telegram Bot Trigger",
       "type": "n8n-nodes-base.telegramTrigger",
-      "typeVersion": 1,
       "position": [240, 300],
-      "webhookId": "telegram-bot"
+      "parameters": {
+        "updates": ["message"]
+      }
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "command-check",
-              "leftValue": "={{ $json.message.text }}",
-              "rightValue": "/start",
-              "operator": {
-                "type": "string",
-                "operation": "startsWith"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
       "id": "command-filter",
       "name": "Befehl Filter",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [460, 300]
+      "position": [460, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/"
+            }
+          ]
+        }
+      }
     },
     {
-      "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "🎬 Willkommen zur kompletten kostenlosen Automation!\n\n📹 Video & Foto Befehle:\n/video [text] - Video mit Avatar generieren\n/photo [text] - Foto erstellen\n/avatar [name] - Avatar erstellen\n\n📤 Upload Befehle:\n/upload_instagram [caption] - Zu Instagram hochladen\n/upload_tiktok [caption] - Zu TikTok hochladen\n/upload_youtube [title] [description] - Zu YouTube hochladen\n\n📧 E-Mail Befehle:\n/email_setup [email] [password] - E-Mail einrichten\n/email_read - E-Mails lesen\n/email_send [to] [subject] [text] - E-Mail senden\n/email_auto_reply [keywords] [template] - Auto-Antworten\n\nBeispiel: /video Hallo Welt!"
-      },
       "id": "welcome-message",
       "name": "Willkommensnachricht",
       "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [680, 200]
+      "position": [680, 200],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "🎬 Willkommen zur kostenlosen Social Media Automation!\n\n📋 Verfügbare Befehle:\n/video [text] - Avatar Video erstellen\n/photo [beschreibung] - Foto generieren\n/upload [platform] - Social Media Upload\n/email [aktion] - E-Mail Automation\n\n🆓 Alles kostenlos mit kostenlosen APIs!"
+      }
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "video-command",
-              "leftValue": "={{ $json.message.text }}",
-              "rightValue": "/video",
-              "operator": {
-                "type": "string",
-                "operation": "startsWith"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
       "id": "video-command-filter",
       "name": "Video Befehl",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 400]
+      "position": [680, 400],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/video"
+            }
+          ]
+        }
+      }
     },
     {
-      "parameters": {
-        "jsCode": "// Text aus Telegram-Nachricht extrahieren\nconst message = $input.first().json.message.text;\nconst videoText = message.replace('/video', '').trim();\n\nif (!videoText) {\n  return {\n    json: {\n      error: true,\n      message: 'Bitte geben Sie einen Text für das Video an. Beispiel: /video Hallo Welt!'\n    }\n  };\n}\n\nreturn {\n  json: {\n    video_text: videoText,\n    chat_id: $input.first().json.chat_id,\n    user_id: $input.first().json.user_id,\n    username: $input.first().json.username,\n    timestamp: new Date().toISOString()\n  }\n};"
-      },
       "id": "extract-video-text",
       "name": "Video Text extrahieren",
       "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 400]
+      "position": [900, 400],
+      "parameters": {
+        "jsCode": "// Extrahiere Text aus /video Befehl\nconst text = $input.first().message.text;\nconst videoText = text.replace('/video', '').trim();\n\nreturn {\n  text: videoText,\n  chatId: $input.first().message.chat.id\n};"
+      }
     },
     {
+      "id": "text-to-speech",
+      "name": "Text zu Sprache (ElevenLabs)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 400],
       "parameters": {
         "url": "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
+        "method": "POST",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "xi-api-key",
+          "value": "={{ $env.ELEVENLABS_API_KEY }}"
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "xi-api-key",
-              "value": "{{ $env.ELEVENLABS_API_KEY }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -131,38 +92,33 @@
           "parameters": [
             {
               "name": "text",
-              "value": "={{ $json.video_text }}"
+              "value": "={{ $json.text }}"
             },
             {
               "name": "model_id",
               "value": "eleven_monolingual_v1"
-            },
-            {
-              "name": "voice_settings",
-              "value": "{\"stability\": 0.5, \"similarity_boost\": 0.5}"
             }
           ]
-        },
-        "options": {}
-      },
-      "id": "text-to-speech",
-      "name": "Text zu Sprache (ElevenLabs)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1120, 400]
+        }
+      }
     },
     {
+      "id": "create-avatar-video",
+      "name": "Avatar Video erstellen (D-ID)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 400],
       "parameters": {
         "url": "https://api.d-id.com/talks",
+        "method": "POST",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "Authorization",
+          "value": "Basic {{ $env.DID_API_KEY }}"
+        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Basic {{ $env.DID_API_KEY }}"
-            },
             {
               "name": "Content-Type",
               "value": "application/json"
@@ -173,1079 +129,465 @@
         "bodyParameters": {
           "parameters": [
             {
-              "name": "script",
-              "value": "{\"type\": \"text\", \"input\": \"={{ $json.video_text }}\"}"
+              "name": "script.type",
+              "value": "text"
             },
             {
-              "name": "config",
-              "value": "{\"fluent\": true, \"pad_audio\": 0.0}"
+              "name": "script.input",
+              "value": "={{ $json.text }}"
             },
             {
               "name": "source_url",
               "value": "https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.jpeg"
             }
           ]
-        },
-        "options": {}
-      },
-      "id": "create-avatar-video",
-      "name": "Avatar Video erstellen (D-ID)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1340, 400]
-    },
-    {
-      "parameters": {
-        "url": "https://api.d-id.com/talks/={{ $json.id }}/status",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Basic {{ $env.DID_API_KEY }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "check-video-status",
-      "name": "Video Status prüfen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1560, 400]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "status-check",
-              "leftValue": "={{ $json.status }}",
-              "rightValue": "done",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "video-ready-check",
-      "name": "Video fertig?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [1780, 400]
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.result_url }}",
-        "options": {}
-      },
-      "id": "download-video",
-      "name": "Video herunterladen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [2000, 300]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('extract-video-text').first().json.chat_id }}",
-        "binaryData": true,
-        "binaryPropertyName": "data",
-        "additionalFields": {
-          "caption": "🎬 Ihr Video ist fertig!\n\nText: {{ $('extract-video-text').first().json.video_text }}"
         }
-      },
+      }
+    },
+    {
       "id": "send-video-telegram",
       "name": "Video an Telegram senden",
       "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [2220, 300]
+      "position": [1560, 400],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "🎬 Avatar Video erfolgreich erstellt!\n\n✅ Text zu Sprache: ElevenLabs\n✅ Avatar Video: D-ID\n✅ Kostenlos: 20 Credits/Monat"
+      }
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "photo-command",
-              "leftValue": "={{ $json.message.text }}",
-              "rightValue": "/photo",
-              "operator": {
-                "type": "string",
-                "operation": "startsWith"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
       "id": "photo-command-filter",
       "name": "Foto Befehl",
       "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 600]
-    },
-    {
+      "position": [680, 600],
       "parameters": {
-        "jsCode": "// Text aus Telegram-Nachricht extrahieren\nconst message = $input.first().json.message.text;\nconst photoText = message.replace('/photo', '').trim();\n\nif (!photoText) {\n  return {\n    json: {\n      error: true,\n      message: 'Bitte geben Sie einen Text für das Foto an. Beispiel: /photo Natur'\n    }\n  };\n}\n\nreturn {\n  json: {\n    photo_text: photoText,\n    chat_id: $input.first().json.chat_id,\n    user_id: $input.first().json.user_id,\n    username: $input.first().json.username,\n    timestamp: new Date().toISOString()\n  }\n};"
-      },
-      "id": "extract-photo-text",
-      "name": "Foto Text extrahieren",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 600]
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/photo"
+            }
+          ]
+        }
+      }
     },
     {
+      "id": "get-photo",
+      "name": "Foto holen (Unsplash)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 600],
       "parameters": {
         "url": "https://api.unsplash.com/photos/random",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "Authorization",
+          "value": "Client-ID {{ $env.UNSPLASH_API_KEY }}"
+        },
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
             {
               "name": "query",
-              "value": "={{ $json.photo_text }}"
-            },
-            {
-              "name": "client_id",
-              "value": "{{ $env.UNSPLASH_API_KEY }}"
+              "value": "={{ $json.message.text.replace('/photo', '').trim() }}"
             }
           ]
-        },
-        "options": {}
-      },
-      "id": "get-photo",
-      "name": "Foto holen (Unsplash)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1120, 600]
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.urls.regular }}",
-        "options": {}
-      },
-      "id": "download-photo",
-      "name": "Foto herunterladen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1340, 600]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $('extract-photo-text').first().json.chat_id }}",
-        "binaryData": true,
-        "binaryPropertyName": "data",
-        "additionalFields": {
-          "caption": "📸 Ihr Foto ist fertig!\n\nText: {{ $('extract-photo-text').first().json.photo_text }}"
         }
-      },
+      }
+    },
+    {
       "id": "send-photo-telegram",
       "name": "Foto an Telegram senden",
       "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [1560, 600]
+      "position": [1120, 600],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "📸 Foto erfolgreich generiert!\n\n✅ Foto: Unsplash\n✅ Kostenlos: 50 Requests/Stunde\n✅ HD-Qualität verfügbar"
+      }
     },
     {
+      "id": "ki-text-generation",
+      "name": "KI Text Generierung (Hugging Face)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 800],
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "upload-instagram",
-              "leftValue": "={{ $json.message.text }}",
-              "rightValue": "/upload_instagram",
-              "operator": {
-                "type": "string",
-                "operation": "startsWith"
-              }
-            }
-          ],
-          "combinator": "or"
+        "url": "https://api-inference.huggingface.co/models/gpt2",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "Authorization",
+          "value": "Bearer {{ $env.HUGGINGFACE_API_KEY }}"
         },
-        "options": {}
-      },
-      "id": "upload-instagram-filter",
-      "name": "Instagram Upload Befehl",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 800]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Upload-Text extrahieren\nconst message = $input.first().json.message.text;\nconst parts = message.split(' ');\nconst caption = parts.slice(1).join(' ') || 'Automatisch generiertes Video';\n\nreturn {\n  json: {\n    platform: 'instagram',\n    caption: caption,\n    chat_id: $input.first().json.chat_id,\n    user_id: $input.first().json.user_id,\n    username: $input.first().json.username\n  }\n};"
-      },
-      "id": "extract-instagram-upload",
-      "name": "Instagram Upload Info extrahieren",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 800]
-    },
-    {
-      "parameters": {
-        "url": "http://localhost:5000/login",
-        "sendBody": true,
-        "bodyParameters": {
+        "sendHeaders": true,
+        "headerParameters": {
           "parameters": [
             {
-              "name": "platform",
-              "value": "instagram"
-            },
-            {
-              "name": "username",
-              "value": "{{ $env.INSTAGRAM_USERNAME }}"
-            },
-            {
-              "name": "password",
-              "value": "{{ $env.INSTAGRAM_PASSWORD }}"
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
-        "options": {}
-      },
-      "id": "instagram-login",
-      "name": "Instagram Login",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1120, 800]
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "inputs",
+              "value": "={{ $json.prompt }}"
+            }
+          ]
+        }
+      }
     },
     {
+      "id": "ki-image-generation",
+      "name": "KI Bild Generierung (Stability AI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 800],
+      "parameters": {
+        "url": "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "Authorization",
+          "value": "Bearer {{ $env.STABILITY_API_KEY }}"
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text_prompts[0][text]",
+              "value": "={{ $json.prompt }}"
+            },
+            {
+              "name": "cfg_scale",
+              "value": "7"
+            },
+            {
+              "name": "height",
+              "value": "1024"
+            },
+            {
+              "name": "width",
+              "value": "1024"
+            },
+            {
+              "name": "samples",
+              "value": "1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "video-generation",
+      "name": "Video Generierung (Replicate)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 800],
+      "parameters": {
+        "url": "https://api.replicate.com/v1/predictions",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "Authorization",
+          "value": "Token {{ $env.REPLICATE_API_KEY }}"
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "version",
+              "value": "stable-video-diffusion-img2vid-xt"
+            },
+            {
+              "name": "input.prompt",
+              "value": "={{ $json.prompt }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cloudinary-upload",
+      "name": "Cloudinary Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1560, 800],
+      "parameters": {
+        "url": "https://api.cloudinary.com/v1_1/{{ $env.CLOUDINARY_CLOUD_NAME }}/image/upload",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "Authorization",
+          "value": "Basic {{ Buffer.from($env.CLOUDINARY_API_KEY + ':' + $env.CLOUDINARY_API_SECRET).toString('base64') }}"
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "value": "={{ $json.file }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "social-media-upload",
+      "name": "Social Media Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1780, 800],
       "parameters": {
         "url": "http://localhost:5000/upload",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             {
               "name": "platform",
-              "value": "instagram"
+              "value": "={{ $json.platform }}"
             },
             {
               "name": "file_path",
-              "value": "{{ $('download-video').first().json.data }}"
+              "value": "={{ $json.file_path }}"
             },
             {
               "name": "caption",
               "value": "={{ $json.caption }}"
             }
           ]
-        },
-        "options": {}
-      },
-      "id": "upload-to-instagram",
-      "name": "Zu Instagram hochladen",
+        }
+      }
+    },
+    {
+      "id": "email-automation",
+      "name": "E-Mail Automation",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1340, 800]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "upload-tiktok",
-              "leftValue": "={{ $json.message.text }}",
-              "rightValue": "/upload_tiktok",
-              "operator": {
-                "type": "string",
-                "operation": "startsWith"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "id": "upload-tiktok-filter",
-      "name": "TikTok Upload Befehl",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 1000]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Upload-Text extrahieren\nconst message = $input.first().json.message.text;\nconst parts = message.split(' ');\nconst caption = parts.slice(1).join(' ') || 'Automatisch generiertes Video';\n\nreturn {\n  json: {\n    platform: 'tiktok',\n    caption: caption,\n    chat_id: $input.first().json.chat_id,\n    user_id: $input.first().json.user_id,\n    username: $input.first().json.username\n  }\n};"
-      },
-      "id": "extract-tiktok-upload",
-      "name": "TikTok Upload Info extrahieren",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 1000]
-    },
-    {
-      "parameters": {
-        "url": "http://localhost:5000/login",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "platform",
-              "value": "tiktok"
-            },
-            {
-              "name": "username",
-              "value": "{{ $env.TIKTOK_USERNAME }}"
-            },
-            {
-              "name": "password",
-              "value": "{{ $env.TIKTOK_PASSWORD }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "tiktok-login",
-      "name": "TikTok Login",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1120, 1000]
-    },
-    {
-      "parameters": {
-        "url": "http://localhost:5000/upload",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "platform",
-              "value": "tiktok"
-            },
-            {
-              "name": "file_path",
-              "value": "{{ $('download-video').first().json.data }}"
-            },
-            {
-              "name": "caption",
-              "value": "={{ $json.caption }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "upload-to-tiktok",
-      "name": "Zu TikTok hochladen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1340, 1000]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "upload-youtube",
-              "leftValue": "={{ $json.message.text }}",
-              "rightValue": "/upload_youtube",
-              "operator": {
-                "type": "string",
-                "operation": "startsWith"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "id": "upload-youtube-filter",
-      "name": "YouTube Upload Befehl",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 1200]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Upload-Text extrahieren\nconst message = $input.first().json.message.text;\nconst parts = message.split(' ');\nconst title = parts[1] || 'Automatisch generiertes Video';\nconst description = parts.slice(2).join(' ') || 'Video automatisch generiert mit n8n';\n\nreturn {\n  json: {\n    platform: 'youtube',\n    title: title,\n    description: description,\n    chat_id: $input.first().json.chat_id,\n    user_id: $input.first().json.user_id,\n    username: $input.first().json.username\n  }\n};"
-      },
-      "id": "extract-youtube-upload",
-      "name": "YouTube Upload Info extrahieren",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 1200]
-    },
-    {
-      "parameters": {
-        "url": "http://localhost:5000/login",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "platform",
-              "value": "youtube"
-            },
-            {
-              "name": "username",
-              "value": "{{ $env.YOUTUBE_EMAIL }}"
-            },
-            {
-              "name": "password",
-              "value": "{{ $env.YOUTUBE_PASSWORD }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "youtube-login",
-      "name": "YouTube Login",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1120, 1200]
-    },
-    {
-      "parameters": {
-        "url": "http://localhost:5000/upload",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "platform",
-              "value": "youtube"
-            },
-            {
-              "name": "file_path",
-              "value": "{{ $('download-video').first().json.data }}"
-            },
-            {
-              "name": "title",
-              "value": "={{ $json.title }}"
-            },
-            {
-              "name": "description",
-              "value": "={{ $json.description }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "upload-to-youtube",
-      "name": "Zu YouTube hochladen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1340, 1200]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "email-setup",
-              "leftValue": "={{ $json.message.text }}",
-              "rightValue": "/email_setup",
-              "operator": {
-                "type": "string",
-                "operation": "startsWith"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "id": "email-setup-filter",
-      "name": "E-Mail Setup Befehl",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 1400]
-    },
-    {
-      "parameters": {
-        "jsCode": "// E-Mail Setup Text extrahieren\nconst message = $input.first().json.message.text;\nconst parts = message.split(' ');\nconst email = parts[1];\nconst password = parts[2];\n\nif (!email || !password) {\n  return {\n    json: {\n      error: true,\n      message: 'Bitte geben Sie E-Mail und Passwort an. Beispiel: /email_setup email@example.com password'\n    }\n  };\n}\n\nreturn {\n  json: {\n    email: email,\n    password: password,\n    chat_id: $input.first().json.chat_id,\n    user_id: $input.first().json.user_id,\n    username: $input.first().json.username\n  }\n};"
-      },
-      "id": "extract-email-setup",
-      "name": "E-Mail Setup Info extrahieren",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [900, 1400]
-    },
-    {
-      "parameters": {
-        "url": "http://localhost:5000/email/setup",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "email",
-              "value": "={{ $json.email }}"
-            },
-            {
-              "name": "password",
-              "value": "={{ $json.password }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "setup-email",
-      "name": "E-Mail Setup",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [1120, 1400]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "email-read",
-              "leftValue": "={{ $json.message.text }}",
-              "rightValue": "/email_read",
-              "operator": {
-                "type": "string",
-                "operation": "startsWith"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "id": "email-read-filter",
-      "name": "E-Mail Lesen Befehl",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [680, 1600]
-    },
-    {
+      "position": [2000, 800],
       "parameters": {
         "url": "http://localhost:5000/email/read",
-        "options": {}
-      },
-      "id": "read-emails",
-      "name": "E-Mails lesen",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [900, 1600]
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        }
+      }
     },
     {
-      "parameters": {
-        "jsCode": "// E-Mails formatieren\nconst emails = $input.first().json.emails;\nlet emailList = '📧 Ihre letzten E-Mails:\\n\\n';\n\nemails.forEach((email, index) => {\n  emailList += `${index + 1}. Von: ${email.sender}\\n`;\n  emailList += `   Betreff: ${email.subject}\\n`;\n  emailList += `   Datum: ${email.date}\\n\\n`;\n});\n\nreturn {\n  json: {\n    email_list: emailList,\n    chat_id: $('email-read-filter').first().json.chat_id\n  }\n};"
-      },
-      "id": "format-emails",
-      "name": "E-Mails formatieren",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1120, 1600]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "={{ $json.email_list }}"
-      },
-      "id": "send-email-list",
-      "name": "E-Mail Liste senden",
+      "id": "success-message",
+      "name": "Erfolgsmeldung",
       "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [1340, 1600]
-    },
-    {
+      "position": [2220, 800],
       "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "✅ Upload erfolgreich!\n\nPlattform: {{ $json.platform }}\nCaption: {{ $json.caption }}"
-      },
-      "id": "upload-success-instagram",
-      "name": "Instagram Upload Erfolg",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [1560, 800]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "✅ Upload erfolgreich!\n\nPlattform: {{ $json.platform }}\nCaption: {{ $json.caption }}"
-      },
-      "id": "upload-success-tiktok",
-      "name": "TikTok Upload Erfolg",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [1560, 1000]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "✅ Upload erfolgreich!\n\nPlattform: {{ $json.platform }}\nTitel: {{ $json.title }}\nBeschreibung: {{ $json.description }}"
-      },
-      "id": "upload-success-youtube",
-      "name": "YouTube Upload Erfolg",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [1560, 1200]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "✅ E-Mail Setup erfolgreich!\n\nE-Mail: {{ $json.email }}"
-      },
-      "id": "email-setup-success",
-      "name": "E-Mail Setup Erfolg",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [1340, 1400]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "⏳ Video wird generiert... Bitte warten Sie einen Moment."
-      },
-      "id": "processing-message",
-      "name": "Verarbeitungsnachricht",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [900, 500]
-    },
-    {
-      "parameters": {
-        "chatId": "={{ $json.chat_id }}",
-        "text": "❌ Fehler beim Generieren des Videos. Bitte versuchen Sie es erneut."
-      },
-      "id": "error-message",
-      "name": "Fehlermeldung",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
-      "position": [2000, 500]
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "✅ Automation erfolgreich abgeschlossen!\n\n🆓 Alle Services kostenlos genutzt\n📊 Limits eingehalten\n🎉 Viel Spaß mit der Automation!"
+      }
     }
   ],
   "connections": {
-    "telegram-trigger": {
+    "Telegram Bot Trigger": {
       "main": [
         [
           {
-            "node": "command-filter",
+            "node": "Befehl Filter",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "command-filter": {
+    "Befehl Filter": {
       "main": [
         [
           {
-            "node": "welcome-message",
+            "node": "Willkommensnachricht",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "video-command-filter",
+            "node": "Video Befehl",
             "type": "main",
             "index": 0
           },
           {
-            "node": "photo-command-filter",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "upload-instagram-filter",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "upload-tiktok-filter",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "upload-youtube-filter",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "email-setup-filter",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "email-read-filter",
+            "node": "Foto Befehl",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "video-command-filter": {
+    "Video Befehl": {
       "main": [
         [
           {
-            "node": "extract-video-text",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "error-message",
+            "node": "Extract Video Text",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "extract-video-text": {
+    "Extract Video Text": {
       "main": [
         [
           {
-            "node": "processing-message",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "text-to-speech",
+            "node": "Text to Speech (ElevenLabs)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "text-to-speech": {
+    "Text to Speech (ElevenLabs)": {
       "main": [
         [
           {
-            "node": "create-avatar-video",
+            "node": "Create Avatar Video (D-ID)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "create-avatar-video": {
+    "Create Avatar Video (D-ID)": {
       "main": [
         [
           {
-            "node": "check-video-status",
+            "node": "Send Video Telegram",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "check-video-status": {
+    "Foto Befehl": {
       "main": [
         [
           {
-            "node": "video-ready-check",
+            "node": "Get Photo (Unsplash)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "video-ready-check": {
+    "Get Photo (Unsplash)": {
       "main": [
         [
           {
-            "node": "download-video",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "check-video-status",
+            "node": "Send Photo Telegram",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "download-video": {
+    "KI Text Generierung (Hugging Face)": {
       "main": [
         [
           {
-            "node": "send-video-telegram",
+            "node": "Cloudinary Upload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "photo-command-filter": {
+    "KI Bild Generierung (Stability AI)": {
       "main": [
         [
           {
-            "node": "extract-photo-text",
+            "node": "Cloudinary Upload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "extract-photo-text": {
+    "Video Generierung (Replicate)": {
       "main": [
         [
           {
-            "node": "get-photo",
+            "node": "Cloudinary Upload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "get-photo": {
+    "Cloudinary Upload": {
       "main": [
         [
           {
-            "node": "download-photo",
+            "node": "Social Media Upload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "download-photo": {
+    "Social Media Upload": {
       "main": [
         [
           {
-            "node": "send-photo-telegram",
+            "node": "E-Mail Automation",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "upload-instagram-filter": {
+    "E-Mail Automation": {
       "main": [
         [
           {
-            "node": "extract-instagram-upload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "extract-instagram-upload": {
-      "main": [
-        [
-          {
-            "node": "instagram-login",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "instagram-login": {
-      "main": [
-        [
-          {
-            "node": "upload-to-instagram",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "upload-to-instagram": {
-      "main": [
-        [
-          {
-            "node": "upload-success-instagram",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "upload-tiktok-filter": {
-      "main": [
-        [
-          {
-            "node": "extract-tiktok-upload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "extract-tiktok-upload": {
-      "main": [
-        [
-          {
-            "node": "tiktok-login",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "tiktok-login": {
-      "main": [
-        [
-          {
-            "node": "upload-to-tiktok",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "upload-to-tiktok": {
-      "main": [
-        [
-          {
-            "node": "upload-success-tiktok",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "upload-youtube-filter": {
-      "main": [
-        [
-          {
-            "node": "extract-youtube-upload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "extract-youtube-upload": {
-      "main": [
-        [
-          {
-            "node": "youtube-login",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "youtube-login": {
-      "main": [
-        [
-          {
-            "node": "upload-to-youtube",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "upload-to-youtube": {
-      "main": [
-        [
-          {
-            "node": "upload-success-youtube",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "email-setup-filter": {
-      "main": [
-        [
-          {
-            "node": "extract-email-setup",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "extract-email-setup": {
-      "main": [
-        [
-          {
-            "node": "setup-email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "setup-email": {
-      "main": [
-        [
-          {
-            "node": "email-setup-success",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "email-read-filter": {
-      "main": [
-        [
-          {
-            "node": "read-emails",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "read-emails": {
-      "main": [
-        [
-          {
-            "node": "format-emails",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "format-emails": {
-      "main": [
-        [
-          {
-            "node": "send-email-list",
+            "node": "Erfolgsmeldung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     }
-  },
-  "pinData": {},
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
-  "tags": [],
-  "triggerCount": 0,
-  "updatedAt": "2024-01-01T00:00:00.000Z",
-  "versionId": "1"
+  }
 }
