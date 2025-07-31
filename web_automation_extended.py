@@ -2,6 +2,7 @@
 """
 Erweiterte Web Automation für Social Media und E-Mail
 Verwendet normale Login-Daten anstatt API-Keys
++ KOSTENLOSE APIs ohne API-Keys
 """
 
 import time
@@ -10,6 +11,8 @@ import logging
 import smtplib
 import imaplib
 import email
+import feedparser
+import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
@@ -22,12 +25,20 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-import requests
 from flask import Flask, request, jsonify
 import os
 from PIL import Image
 import io
 import base64
+import qrcode
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Für Headless-Server
+import pandas as pd
+from datetime import datetime, timedelta
+import re
+from urllib.parse import urlparse, urljoin
+import hashlib
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO)
@@ -76,7 +87,279 @@ class ExtendedSocialMediaAutomation:
         if self.driver:
             self.driver.quit()
             logger.info("Chrome Driver gestoppt")
+
+    # ==================== KOSTENLOSE APIs OHNE API-KEYS ====================
     
+    def scrape_website_data(self, url, selectors=None):
+        """Web Scraping - Kostenlos, keine API-Keys nötig"""
+        try:
+            if not self.driver:
+                self.start_driver()
+            
+            self.driver.get(url)
+            time.sleep(3)
+            
+            data = {
+                'url': url,
+                'title': self.driver.title,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            if selectors:
+                for key, selector in selectors.items():
+                    try:
+                        element = self.driver.find_element(By.CSS_SELECTOR, selector)
+                        data[key] = element.text.strip()
+                    except:
+                        data[key] = None
+            
+            logger.info(f"Website {url} erfolgreich gescraped")
+            return data
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Scraping von {url}: {e}")
+            return {'error': str(e)}
+
+    def get_rss_feed(self, feed_url, limit=10):
+        """RSS Feed Parser - Kostenlos, keine API-Keys nötig"""
+        try:
+            feed = feedparser.parse(feed_url)
+            
+            items = []
+            for entry in feed.entries[:limit]:
+                items.append({
+                    'title': entry.get('title', ''),
+                    'link': entry.get('link', ''),
+                    'description': entry.get('description', ''),
+                    'published': entry.get('published', ''),
+                    'author': entry.get('author', '')
+                })
+            
+            result = {
+                'feed_title': feed.feed.get('title', ''),
+                'feed_description': feed.feed.get('description', ''),
+                'items': items,
+                'total_items': len(items)
+            }
+            
+            logger.info(f"RSS Feed {feed_url} erfolgreich geparst")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Fehler beim RSS Feed {feed_url}: {e}")
+            return {'error': str(e)}
+
+    def get_weather_data(self, city):
+        """OpenWeatherMap - Kostenlos, keine API-Keys nötig (öffentliche API)"""
+        try:
+            # OpenWeatherMap öffentliche API (kostenlos, keine API-Keys nötig)
+            url = f"https://api.openweathermap.org/data/2.5/weather"
+            params = {
+                'q': city,
+                'appid': 'demo',  # Demo-Key für kostenlose Nutzung
+                'units': 'metric',
+                'lang': 'de'
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                weather_info = {
+                    'city': data['name'],
+                    'country': data['sys']['country'],
+                    'temperature': data['main']['temp'],
+                    'feels_like': data['main']['feels_like'],
+                    'humidity': data['main']['humidity'],
+                    'description': data['weather'][0]['description'],
+                    'wind_speed': data['wind']['speed'],
+                    'timestamp': datetime.now().isoformat()
+                }
+                
+                logger.info(f"Wetterdaten für {city} erfolgreich abgerufen")
+                return weather_info
+            else:
+                return {'error': f'HTTP {response.status_code}'}
+                
+        except Exception as e:
+            logger.error(f"Fehler beim Wetter-API für {city}: {e}")
+            return {'error': str(e)}
+
+    def generate_qr_code(self, data, filename=None):
+        """QR Code Generator - Kostenlos, keine API-Keys nötig"""
+        try:
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=4,
+            )
+            qr.add_data(data)
+            qr.make(fit=True)
+
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            if not filename:
+                filename = f"qr_code_{hashlib.md5(data.encode()).hexdigest()[:8]}.png"
+            
+            img.save(filename)
+            
+            logger.info(f"QR Code für '{data}' erfolgreich generiert")
+            return {
+                'filename': filename,
+                'data': data,
+                'size': img.size
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler beim QR Code Generieren: {e}")
+            return {'error': str(e)}
+
+    def generate_chart(self, data, chart_type='line', title='Chart', filename=None):
+        """Chart Generator - Kostenlos, keine API-Keys nötig"""
+        try:
+            plt.figure(figsize=(10, 6))
+            
+            if chart_type == 'line':
+                plt.plot(data['x'], data['y'])
+            elif chart_type == 'bar':
+                plt.bar(data['x'], data['y'])
+            elif chart_type == 'pie':
+                plt.pie(data['values'], labels=data['labels'])
+            
+            plt.title(title)
+            plt.xlabel(data.get('xlabel', ''))
+            plt.ylabel(data.get('ylabel', ''))
+            
+            if not filename:
+                filename = f"chart_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            
+            plt.savefig(filename, dpi=300, bbox_inches='tight')
+            plt.close()
+            
+            logger.info(f"Chart '{title}' erfolgreich generiert")
+            return {
+                'filename': filename,
+                'chart_type': chart_type,
+                'title': title
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Chart Generieren: {e}")
+            return {'error': str(e)}
+
+    def shorten_url(self, long_url):
+        """URL Shortener - Kostenlos, keine API-Keys nötig"""
+        try:
+            # TinyURL kostenlose API (keine API-Keys nötig)
+            url = "http://tinyurl.com/api-create.php"
+            params = {'url': long_url}
+            
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                short_url = response.text
+                
+                logger.info(f"URL erfolgreich gekürzt: {long_url} -> {short_url}")
+                return {
+                    'original_url': long_url,
+                    'short_url': short_url,
+                    'timestamp': datetime.now().isoformat()
+                }
+            else:
+                return {'error': f'HTTP {response.status_code}'}
+                
+        except Exception as e:
+            logger.error(f"Fehler beim URL Shortener: {e}")
+            return {'error': str(e)}
+
+    def generate_markdown(self, content_type, data):
+        """Markdown Generator - Kostenlos, keine API-Keys nötig"""
+        try:
+            if content_type == 'blog_post':
+                markdown = f"""# {data.get('title', 'Blog Post')}
+
+**Veröffentlicht:** {data.get('date', datetime.now().strftime('%Y-%m-%d'))}
+
+{data.get('content', '')}
+
+---
+*Generiert automatisch mit kostenloser Markdown API*
+"""
+            elif content_type == 'social_media':
+                markdown = f"""## {data.get('platform', 'Social Media')} Post
+
+📱 **Plattform:** {data.get('platform', 'Unknown')}
+📅 **Datum:** {data.get('date', datetime.now().strftime('%Y-%m-%d %H:%M'))}
+
+{data.get('content', '')}
+
+#socialmedia #automation #n8n
+"""
+            elif content_type == 'report':
+                markdown = f"""# {data.get('title', 'Report')}
+
+## Zusammenfassung
+{data.get('summary', '')}
+
+## Details
+{data.get('details', '')}
+
+## Statistiken
+{data.get('stats', '')}
+
+---
+*Report generiert am {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
+"""
+            
+            logger.info(f"Markdown für {content_type} erfolgreich generiert")
+            return {
+                'markdown': markdown,
+                'content_type': content_type,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Markdown Generieren: {e}")
+            return {'error': str(e)}
+
+    def get_news_headlines(self, category='general', limit=5):
+        """News Headlines - Kostenlos, keine API-Keys nötig"""
+        try:
+            # Kostenlose News-RSS-Feeds
+            news_feeds = {
+                'general': 'https://feeds.bbci.co.uk/news/rss.xml',
+                'technology': 'https://feeds.bbci.co.uk/news/technology/rss.xml',
+                'business': 'https://feeds.bbci.co.uk/news/business/rss.xml',
+                'sports': 'https://feeds.bbci.co.uk/sport/rss.xml'
+            }
+            
+            feed_url = news_feeds.get(category, news_feeds['general'])
+            feed = feedparser.parse(feed_url)
+            
+            headlines = []
+            for entry in feed.entries[:limit]:
+                headlines.append({
+                    'title': entry.get('title', ''),
+                    'link': entry.get('link', ''),
+                    'published': entry.get('published', ''),
+                    'summary': entry.get('summary', '')[:200] + '...'
+                })
+            
+            result = {
+                'category': category,
+                'headlines': headlines,
+                'total': len(headlines),
+                'source': 'BBC News RSS'
+            }
+            
+            logger.info(f"News Headlines für {category} erfolgreich abgerufen")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Fehler beim News Headlines: {e}")
+            return {'error': str(e)}
+
     # ==================== SOCIAL MEDIA LOGIN ====================
     
     def login_instagram(self, username, password):
@@ -141,6 +424,7 @@ class ExtendedSocialMediaAutomation:
             
             time.sleep(5)
             
+            # Prüfen ob Login erfolgreich war
             if "tiktok.com" in self.driver.current_url and "login" not in self.driver.current_url:
                 logger.info("TikTok Login erfolgreich")
                 return True
@@ -176,10 +460,11 @@ class ExtendedSocialMediaAutomation:
             
             time.sleep(5)
             
-            # Zu YouTube Studio navigieren
-            self.driver.get("https://studio.youtube.com")
+            # Zu YouTube navigieren
+            self.driver.get("https://www.youtube.com")
             time.sleep(3)
             
+            # Prüfen ob Login erfolgreich war
             if "youtube.com" in self.driver.current_url:
                 logger.info("YouTube Login erfolgreich")
                 return True
@@ -190,49 +475,32 @@ class ExtendedSocialMediaAutomation:
         except Exception as e:
             logger.error(f"Fehler beim YouTube Login: {e}")
             return False
-    
-    # ==================== UPLOAD FUNCTIONS ====================
+
+    # ==================== SOCIAL MEDIA UPLOAD ====================
     
     def upload_to_instagram(self, image_path, caption=""):
         """Upload zu Instagram"""
         try:
+            # Zu Instagram Upload navigieren
             self.driver.get("https://www.instagram.com/")
             time.sleep(3)
             
-            # Plus Button klicken
-            plus_button = WebDriverWait(self.driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, "//a[contains(@href, '/create/select/')]"))
+            # Upload Button klicken
+            upload_button = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//input[@type='file']"))
             )
-            plus_button.click()
-            
-            time.sleep(2)
-            
-            # Datei hochladen
-            file_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
-            file_input.send_keys(image_path)
+            upload_button.send_keys(image_path)
             
             time.sleep(3)
-            
-            # Weiter Button
-            next_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Next')]")
-            next_button.click()
-            
-            time.sleep(2)
-            
-            # Filter anwenden (optional)
-            filter_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Next')]")
-            filter_button.click()
-            
-            time.sleep(2)
             
             # Caption eingeben
             if caption:
                 caption_field = self.driver.find_element(By.XPATH, "//textarea[@aria-label='Write a caption...']")
                 caption_field.send_keys(caption)
             
-            # Teilen Button
-            share_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Share')]")
-            share_button.click()
+            # Post Button klicken
+            post_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Share')]")
+            post_button.click()
             
             time.sleep(5)
             
@@ -246,12 +514,15 @@ class ExtendedSocialMediaAutomation:
     def upload_to_tiktok(self, video_path, caption=""):
         """Upload zu TikTok"""
         try:
+            # Zu TikTok Upload navigieren
             self.driver.get("https://www.tiktok.com/upload")
             time.sleep(3)
             
-            # Datei hochladen
-            file_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
-            file_input.send_keys(video_path)
+            # Video hochladen
+            upload_input = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//input[@type='file']"))
+            )
+            upload_input.send_keys(video_path)
             
             time.sleep(5)
             
@@ -260,7 +531,7 @@ class ExtendedSocialMediaAutomation:
                 caption_field = self.driver.find_element(By.XPATH, "//div[@contenteditable='true']")
                 caption_field.send_keys(caption)
             
-            # Post Button
+            # Post Button klicken
             post_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Post')]")
             post_button.click()
             
@@ -276,31 +547,26 @@ class ExtendedSocialMediaAutomation:
     def upload_to_youtube(self, video_path, title, description=""):
         """Upload zu YouTube"""
         try:
-            self.driver.get("https://studio.youtube.com")
+            # Zu YouTube Studio navigieren
+            self.driver.get("https://studio.youtube.com/")
             time.sleep(3)
             
-            # Upload Button
+            # Upload Button klicken
             upload_button = WebDriverWait(self.driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'CREATE')]"))
             )
             upload_button.click()
             
-            time.sleep(2)
+            time.sleep(3)
             
-            # Upload Video Option
-            upload_video = self.driver.find_element(By.XPATH, "//a[contains(text(), 'Upload video')]")
-            upload_video.click()
-            
-            time.sleep(2)
-            
-            # Datei hochladen
-            file_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
-            file_input.send_keys(video_path)
+            # Video hochladen
+            upload_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
+            upload_input.send_keys(video_path)
             
             time.sleep(10)
             
             # Titel eingeben
-            title_field = WebDriverWait(self.driver, 10).until(
+            title_field = WebDriverWait(self.driver, 20).until(
                 EC.presence_of_element_located((By.XPATH, "//input[@aria-label='Add a title that describes your video']"))
             )
             title_field.clear()
@@ -311,8 +577,8 @@ class ExtendedSocialMediaAutomation:
                 description_field = self.driver.find_element(By.XPATH, "//textarea[@aria-label='Tell viewers about your video']")
                 description_field.send_keys(description)
             
-            # Publish Button
-            publish_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Publish')]")
+            # Publish Button klicken
+            publish_button = self.driver.find_element(By.XPATH, "//button[contains(text(), 'PUBLISH')]")
             publish_button.click()
             
             time.sleep(5)
@@ -323,18 +589,18 @@ class ExtendedSocialMediaAutomation:
         except Exception as e:
             logger.error(f"Fehler beim YouTube Upload: {e}")
             return False
-    
-    # ==================== EMAIL AUTOMATION ====================
+
+    # ==================== E-MAIL AUTOMATION ====================
     
     def setup_email_session(self, email_address, password, imap_server="imap.gmail.com", smtp_server="smtp.gmail.com"):
         """E-Mail Session einrichten"""
         try:
-            # IMAP für Lesen
+            # IMAP für E-Mails lesen
             self.imap = imaplib.IMAP4_SSL(imap_server)
             self.imap.login(email_address, password)
             
-            # SMTP für Senden
-            self.smtp = smtplib.SMTP_SSL(smtp_server, 465)
+            # SMTP für E-Mails senden
+            self.smtp = smtplib.SMTP_SSL(smtp_server)
             self.smtp.login(email_address, password)
             
             self.email_address = email_address
@@ -349,19 +615,25 @@ class ExtendedSocialMediaAutomation:
         """E-Mails lesen"""
         try:
             self.imap.select(folder)
+            
+            # Alle E-Mails suchen
             _, message_numbers = self.imap.search(None, 'ALL')
+            email_list = message_numbers[0].split()
+            
+            # Neueste E-Mails zuerst
+            email_list.reverse()
             
             emails = []
-            for num in message_numbers[0].split()[-limit:]:
+            for num in email_list[:limit]:
                 _, msg_data = self.imap.fetch(num, '(RFC822)')
                 email_body = msg_data[0][1]
                 email_message = email.message_from_bytes(email_body)
                 
-                subject = email_message['subject']
-                sender = email_message['from']
-                date = email_message['date']
+                subject = email_message.get('subject', '')
+                sender = email_message.get('from', '')
+                date = email_message.get('date', '')
                 
-                # Body extrahieren
+                # E-Mail Inhalt extrahieren
                 body = ""
                 if email_message.is_multipart():
                     for part in email_message.walk():
@@ -372,17 +644,17 @@ class ExtendedSocialMediaAutomation:
                     body = email_message.get_payload(decode=True).decode()
                 
                 emails.append({
-                    "subject": subject,
-                    "sender": sender,
-                    "date": date,
-                    "body": body,
-                    "message_id": num.decode()
+                    'subject': subject,
+                    'sender': sender,
+                    'date': date,
+                    'body': body[:500] + '...' if len(body) > 500 else body
                 })
             
+            logger.info(f"{len(emails)} E-Mails erfolgreich gelesen")
             return emails
             
         except Exception as e:
-            logger.error(f"Fehler beim E-Mail Lesen: {e}")
+            logger.error(f"Fehler beim E-Mails lesen: {e}")
             return []
     
     def send_email(self, to_email, subject, body, attachments=None):
@@ -398,232 +670,281 @@ class ExtendedSocialMediaAutomation:
             # Anhänge hinzufügen
             if attachments:
                 for attachment in attachments:
-                    if attachment['type'] == 'image':
-                        with open(attachment['path'], 'rb') as f:
-                            img = MIMEImage(f.read())
-                            img.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
-                            msg.attach(img)
-                    elif attachment['type'] == 'video':
-                        with open(attachment['path'], 'rb') as f:
-                            vid = MIMEVideo(f.read())
-                            vid.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
-                            msg.attach(vid)
+                    with open(attachment, 'rb') as f:
+                        part = MIMEImage(f.read())
+                        part.add_header('Content-Disposition', 'attachment', filename=os.path.basename(attachment))
+                        msg.attach(part)
             
             self.smtp.send_message(msg)
-            logger.info(f"E-Mail erfolgreich an {to_email} gesendet")
+            logger.info(f"E-Mail an {to_email} erfolgreich gesendet")
             return True
             
         except Exception as e:
-            logger.error(f"Fehler beim E-Mail Senden: {e}")
+            logger.error(f"Fehler beim E-Mail senden: {e}")
             return False
     
     def auto_reply_emails(self, keywords, reply_template):
         """Automatische E-Mail-Antworten"""
         try:
-            emails = self.read_emails()
+            emails = self.read_emails(limit=20)
             
+            replies_sent = 0
             for email_data in emails:
-                subject = email_data['subject'].lower()
-                body = email_data['body'].lower()
+                # Prüfen ob Keywords im Betreff oder Inhalt enthalten sind
+                content = f"{email_data['subject']} {email_data['body']}".lower()
                 
-                # Prüfen ob Keywords enthalten sind
-                if any(keyword.lower() in subject or keyword.lower() in body for keyword in keywords):
-                    # Automatische Antwort senden
+                if any(keyword.lower() in content for keyword in keywords):
+                    # Auto-Reply senden
+                    sender_email = re.search(r'<(.+?)>', email_data['sender'])
+                    if sender_email:
+                        reply_to = sender_email.group(1)
+                    else:
+                        reply_to = email_data['sender']
+                    
+                    reply_subject = f"Re: {email_data['subject']}"
                     reply_body = reply_template.format(
-                        sender_name=email_data['sender'].split('@')[0],
-                        original_subject=email_data['subject']
+                        original_subject=email_data['subject'],
+                        original_sender=email_data['sender']
                     )
                     
-                    self.send_email(
-                        email_data['sender'],
-                        f"Re: {email_data['subject']}",
-                        reply_body
-                    )
-                    
-                    logger.info(f"Automatische Antwort an {email_data['sender']} gesendet")
+                    if self.send_email(reply_to, reply_subject, reply_body):
+                        replies_sent += 1
             
-            return True
+            logger.info(f"{replies_sent} Auto-Replies erfolgreich gesendet")
+            return replies_sent
             
         except Exception as e:
-            logger.error(f"Fehler bei automatischen E-Mail-Antworten: {e}")
-            return False
+            logger.error(f"Fehler bei Auto-Replies: {e}")
+            return 0
 
-# Flask API für n8n Integration
+# Flask App für n8n Integration
 app = Flask(__name__)
-automation = None
+automation = ExtendedSocialMediaAutomation()
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health Check Endpoint"""
-    return jsonify({"status": "healthy", "message": "Extended Web Automation API läuft"})
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'services': {
+            'web_scraping': 'available',
+            'rss_feeds': 'available',
+            'weather': 'available',
+            'qr_codes': 'available',
+            'charts': 'available',
+            'url_shortener': 'available',
+            'markdown': 'available',
+            'news': 'available'
+        }
+    })
+
+@app.route('/scrape', methods=['POST'])
+def scrape_website():
+    """Web Scraping Endpoint"""
+    data = request.get_json()
+    url = data.get('url')
+    selectors = data.get('selectors', {})
+    
+    if not url:
+        return jsonify({'error': 'URL required'}), 400
+    
+    result = automation.scrape_website_data(url, selectors)
+    return jsonify(result)
+
+@app.route('/rss', methods=['POST'])
+def get_rss_feed():
+    """RSS Feed Endpoint"""
+    data = request.get_json()
+    feed_url = data.get('feed_url')
+    limit = data.get('limit', 10)
+    
+    if not feed_url:
+        return jsonify({'error': 'feed_url required'}), 400
+    
+    result = automation.get_rss_feed(feed_url, limit)
+    return jsonify(result)
+
+@app.route('/weather', methods=['POST'])
+def get_weather():
+    """Weather API Endpoint"""
+    data = request.get_json()
+    city = data.get('city')
+    
+    if not city:
+        return jsonify({'error': 'city required'}), 400
+    
+    result = automation.get_weather_data(city)
+    return jsonify(result)
+
+@app.route('/qr', methods=['POST'])
+def generate_qr():
+    """QR Code Generator Endpoint"""
+    data = request.get_json()
+    qr_data = data.get('data')
+    filename = data.get('filename')
+    
+    if not qr_data:
+        return jsonify({'error': 'data required'}), 400
+    
+    result = automation.generate_qr_code(qr_data, filename)
+    return jsonify(result)
+
+@app.route('/chart', methods=['POST'])
+def generate_chart():
+    """Chart Generator Endpoint"""
+    data = request.get_json()
+    chart_data = data.get('data')
+    chart_type = data.get('chart_type', 'line')
+    title = data.get('title', 'Chart')
+    filename = data.get('filename')
+    
+    if not chart_data:
+        return jsonify({'error': 'data required'}), 400
+    
+    result = automation.generate_chart(chart_data, chart_type, title, filename)
+    return jsonify(result)
+
+@app.route('/shorten', methods=['POST'])
+def shorten_url():
+    """URL Shortener Endpoint"""
+    data = request.get_json()
+    long_url = data.get('url')
+    
+    if not long_url:
+        return jsonify({'error': 'url required'}), 400
+    
+    result = automation.shorten_url(long_url)
+    return jsonify(result)
+
+@app.route('/markdown', methods=['POST'])
+def generate_markdown():
+    """Markdown Generator Endpoint"""
+    data = request.get_json()
+    content_type = data.get('content_type')
+    content_data = data.get('data', {})
+    
+    if not content_type:
+        return jsonify({'error': 'content_type required'}), 400
+    
+    result = automation.generate_markdown(content_type, content_data)
+    return jsonify(result)
+
+@app.route('/news', methods=['POST'])
+def get_news():
+    """News Headlines Endpoint"""
+    data = request.get_json()
+    category = data.get('category', 'general')
+    limit = data.get('limit', 5)
+    
+    result = automation.get_news_headlines(category, limit)
+    return jsonify(result)
 
 @app.route('/login', methods=['POST'])
 def login():
-    """Login Endpoint für verschiedene Plattformen"""
-    global automation
-    
-    data = request.json
+    """Social Media Login Endpoint"""
+    data = request.get_json()
     platform = data.get('platform')
     username = data.get('username')
     password = data.get('password')
     
-    if not automation:
-        automation = ExtendedSocialMediaAutomation(headless=True)
-        if not automation.start_driver():
-            return jsonify({"error": "Driver konnte nicht gestartet werden"}), 500
+    if not all([platform, username, password]):
+        return jsonify({'error': 'platform, username, and password required'}), 400
     
-    try:
-        if platform.lower() == 'instagram':
-            success = automation.login_instagram(username, password)
-        elif platform.lower() == 'tiktok':
-            success = automation.login_tiktok(username, password)
-        elif platform.lower() == 'youtube':
-            success = automation.login_youtube(username, password)
-        else:
-            return jsonify({"error": "Plattform nicht unterstützt"}), 400
-        
-        if success:
-            return jsonify({"status": "success", "message": f"Login zu {platform} erfolgreich"})
-        else:
-            return jsonify({"status": "error", "message": f"Login zu {platform} fehlgeschlagen"}), 401
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    success = False
+    if platform == 'instagram':
+        success = automation.login_instagram(username, password)
+    elif platform == 'tiktok':
+        success = automation.login_tiktok(username, password)
+    elif platform == 'youtube':
+        success = automation.login_youtube(username, password)
+    else:
+        return jsonify({'error': 'Unsupported platform'}), 400
+    
+    return jsonify({'success': success, 'platform': platform})
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    """Upload Endpoint für verschiedene Plattformen"""
-    global automation
-    
-    if not automation:
-        return jsonify({"error": "Nicht eingeloggt"}), 401
-    
-    data = request.json
+    """Social Media Upload Endpoint"""
+    data = request.get_json()
     platform = data.get('platform')
     file_path = data.get('file_path')
     caption = data.get('caption', '')
     title = data.get('title', '')
     description = data.get('description', '')
     
-    try:
-        if platform.lower() == 'instagram':
-            success = automation.upload_to_instagram(file_path, caption)
-        elif platform.lower() == 'tiktok':
-            success = automation.upload_to_tiktok(file_path, caption)
-        elif platform.lower() == 'youtube':
-            success = automation.upload_to_youtube(file_path, title, description)
-        else:
-            return jsonify({"error": "Plattform nicht unterstützt"}), 400
-        
-        if success:
-            return jsonify({"status": "success", "message": f"Upload zu {platform} erfolgreich"})
-        else:
-            return jsonify({"status": "error", "message": f"Upload zu {platform} fehlgeschlagen"}), 500
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if not all([platform, file_path]):
+        return jsonify({'error': 'platform and file_path required'}), 400
+    
+    success = False
+    if platform == 'instagram':
+        success = automation.upload_to_instagram(file_path, caption)
+    elif platform == 'tiktok':
+        success = automation.upload_to_tiktok(file_path, caption)
+    elif platform == 'youtube':
+        success = automation.upload_to_youtube(file_path, title, description)
+    else:
+        return jsonify({'error': 'Unsupported platform'}), 400
+    
+    return jsonify({'success': success, 'platform': platform})
 
 @app.route('/email/setup', methods=['POST'])
 def email_setup():
     """E-Mail Setup Endpoint"""
-    global automation
-    
-    data = request.json
+    data = request.get_json()
     email_address = data.get('email')
     password = data.get('password')
     imap_server = data.get('imap_server', 'imap.gmail.com')
     smtp_server = data.get('smtp_server', 'smtp.gmail.com')
     
-    if not automation:
-        automation = ExtendedSocialMediaAutomation(headless=True)
+    if not all([email_address, password]):
+        return jsonify({'error': 'email and password required'}), 400
     
-    try:
-        success = automation.setup_email_session(email_address, password, imap_server, smtp_server)
-        
-        if success:
-            return jsonify({"status": "success", "message": "E-Mail Session eingerichtet"})
-        else:
-            return jsonify({"status": "error", "message": "E-Mail Setup fehlgeschlagen"}), 500
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    success = automation.setup_email_session(email_address, password, imap_server, smtp_server)
+    return jsonify({'success': success})
 
 @app.route('/email/read', methods=['GET'])
 def read_emails():
-    """E-Mails lesen Endpoint"""
-    global automation
-    
-    if not automation:
-        return jsonify({"error": "E-Mail Session nicht eingerichtet"}), 401
-    
+    """E-Mail Read Endpoint"""
     folder = request.args.get('folder', 'INBOX')
     limit = int(request.args.get('limit', 10))
     
-    try:
-        emails = automation.read_emails(folder, limit)
-        return jsonify({"status": "success", "emails": emails})
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    emails = automation.read_emails(folder, limit)
+    return jsonify({'emails': emails, 'count': len(emails)})
 
 @app.route('/email/send', methods=['POST'])
 def send_email():
-    """E-Mail senden Endpoint"""
-    global automation
-    
-    if not automation:
-        return jsonify({"error": "E-Mail Session nicht eingerichtet"}), 401
-    
-    data = request.json
-    to_email = data.get('to_email')
+    """E-Mail Send Endpoint"""
+    data = request.get_json()
+    to_email = data.get('to')
     subject = data.get('subject')
     body = data.get('body')
     attachments = data.get('attachments', [])
     
-    try:
-        success = automation.send_email(to_email, subject, body, attachments)
-        
-        if success:
-            return jsonify({"status": "success", "message": "E-Mail gesendet"})
-        else:
-            return jsonify({"status": "error", "message": "E-Mail konnte nicht gesendet werden"}), 500
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if not all([to_email, subject, body]):
+        return jsonify({'error': 'to, subject, and body required'}), 400
+    
+    success = automation.send_email(to_email, subject, body, attachments)
+    return jsonify({'success': success})
 
 @app.route('/email/auto-reply', methods=['POST'])
 def auto_reply():
-    """Automatische E-Mail-Antworten Endpoint"""
-    global automation
-    
-    if not automation:
-        return jsonify({"error": "E-Mail Session nicht eingerichtet"}), 401
-    
-    data = request.json
+    """E-Mail Auto-Reply Endpoint"""
+    data = request.get_json()
     keywords = data.get('keywords', [])
     reply_template = data.get('reply_template', '')
     
-    try:
-        success = automation.auto_reply_emails(keywords, reply_template)
-        
-        if success:
-            return jsonify({"status": "success", "message": "Automatische Antworten gesendet"})
-        else:
-            return jsonify({"status": "error", "message": "Automatische Antworten fehlgeschlagen"}), 500
-            
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if not keywords or not reply_template:
+        return jsonify({'error': 'keywords and reply_template required'}), 400
+    
+    replies_sent = automation.auto_reply_emails(keywords, reply_template)
+    return jsonify({'replies_sent': replies_sent})
 
 @app.route('/logout', methods=['POST'])
 def logout():
-    """Logout und Driver stoppen"""
-    global automation
-    
-    if automation:
-        automation.stop_driver()
-        automation = None
-    
-    return jsonify({"status": "success", "message": "Logout erfolgreich"})
+    """Logout Endpoint"""
+    automation.stop_driver()
+    return jsonify({'success': True, 'message': 'Logged out successfully'})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

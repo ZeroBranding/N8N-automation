@@ -35,7 +35,7 @@
       "parameters": {
         "operation": "sendMessage",
         "chatId": "={{ $json.message.chat.id }}",
-        "text": "🎬 Willkommen zur kostenlosen Social Media Automation!\n\n📋 Verfügbare Befehle:\n/video [text] - Avatar Video erstellen\n/photo [beschreibung] - Foto generieren\n/upload [platform] - Social Media Upload\n/email [aktion] - E-Mail Automation\n\n🆓 Alles kostenlos mit kostenlosen APIs!"
+        "text": "🎬 Willkommen zur kostenlosen Social Media Automation!\n\n📋 Verfügbare Befehle:\n/video [text] - Avatar Video erstellen\n/photo [beschreibung] - Foto generieren\n/scrape [url] - Website Daten scrapen\n/rss [url] - RSS Feed lesen\n/weather [stadt] - Wetter abrufen\n/qr [text] - QR Code generieren\n/chart [daten] - Diagramm erstellen\n/shorten [url] - URL kürzen\n/markdown [typ] - Markdown generieren\n/news [kategorie] - News Headlines\n/email [aktion] - E-Mail Automation\n\n🆓 Alles kostenlos mit kostenlosen APIs!"
       }
     },
     {
@@ -209,19 +209,30 @@
       }
     },
     {
-      "id": "ki-text-generation",
-      "name": "KI Text Generierung (Hugging Face)",
+      "id": "scrape-command-filter",
+      "name": "Scrape Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 800],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/scrape"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "web-scraping",
+      "name": "Web Scraping (Kostenlos)",
       "type": "n8n-nodes-base.httpRequest",
       "position": [900, 800],
       "parameters": {
-        "url": "https://api-inference.huggingface.co/models/gpt2",
+        "url": "http://localhost:5000/scrape",
         "method": "POST",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "httpHeaderAuth": {
-          "name": "Authorization",
-          "value": "Bearer {{ $env.HUGGINGFACE_API_KEY }}"
-        },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -235,190 +246,506 @@
         "bodyParameters": {
           "parameters": [
             {
-              "name": "inputs",
-              "value": "={{ $json.prompt }}"
+              "name": "url",
+              "value": "={{ $json.message.text.replace('/scrape', '').trim() }}"
             }
           ]
         }
       }
     },
     {
-      "id": "ki-image-generation",
-      "name": "KI Bild Generierung (Stability AI)",
+      "id": "rss-command-filter",
+      "name": "RSS Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1000],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/rss"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rss-feed",
+      "name": "RSS Feed (Kostenlos)",
       "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1000],
+      "parameters": {
+        "url": "http://localhost:5000/rss",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "feed_url",
+              "value": "={{ $json.message.text.replace('/rss', '').trim() }}"
+            },
+            {
+              "name": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "weather-command-filter",
+      "name": "Weather Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1200],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/weather"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "weather-api",
+      "name": "Wetter API (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1200],
+      "parameters": {
+        "url": "http://localhost:5000/weather",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "city",
+              "value": "={{ $json.message.text.replace('/weather', '').trim() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "qr-command-filter",
+      "name": "QR Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1400],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/qr"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "qr-generator",
+      "name": "QR Code Generator (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1400],
+      "parameters": {
+        "url": "http://localhost:5000/qr",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "={{ $json.message.text.replace('/qr', '').trim() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "chart-command-filter",
+      "name": "Chart Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1600],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/chart"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "chart-generator",
+      "name": "Chart Generator (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1600],
+      "parameters": {
+        "url": "http://localhost:5000/chart",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "{\"x\": [1,2,3,4,5], \"y\": [10,20,15,25,30]}"
+            },
+            {
+              "name": "chart_type",
+              "value": "line"
+            },
+            {
+              "name": "title",
+              "value": "Beispiel Chart"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shorten-command-filter",
+      "name": "Shorten Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1800],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/shorten"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "url-shortener",
+      "name": "URL Shortener (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1800],
+      "parameters": {
+        "url": "http://localhost:5000/shorten",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.message.text.replace('/shorten', '').trim() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "markdown-command-filter",
+      "name": "Markdown Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 2000],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/markdown"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "markdown-generator",
+      "name": "Markdown Generator (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 2000],
+      "parameters": {
+        "url": "http://localhost:5000/markdown",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content_type",
+              "value": "blog_post"
+            },
+            {
+              "name": "data",
+              "value": "{\"title\": \"Beispiel Blog Post\", \"content\": \"Dies ist ein automatisch generierter Blog Post.\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "news-command-filter",
+      "name": "News Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 2200],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/news"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "news-headlines",
+      "name": "News Headlines (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 2200],
+      "parameters": {
+        "url": "http://localhost:5000/news",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "category",
+              "value": "general"
+            },
+            {
+              "name": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "format-scrape-result",
+      "name": "Scrape Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
       "position": [1120, 800],
       "parameters": {
-        "url": "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
-        "method": "POST",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "httpHeaderAuth": {
-          "name": "Authorization",
-          "value": "Bearer {{ $env.STABILITY_API_KEY }}"
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "text_prompts[0][text]",
-              "value": "={{ $json.prompt }}"
-            },
-            {
-              "name": "cfg_scale",
-              "value": "7"
-            },
-            {
-              "name": "height",
-              "value": "1024"
-            },
-            {
-              "name": "width",
-              "value": "1024"
-            },
-            {
-              "name": "samples",
-              "value": "1"
-            }
-          ]
-        }
+        "jsCode": "const data = $input.first().json;\nconst message = `🌐 Website Scraping erfolgreich!\n\n📄 Titel: ${data.title}\n🔗 URL: ${data.url}\n⏰ Timestamp: ${data.timestamp}\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
       }
     },
     {
-      "id": "video-generation",
-      "name": "Video Generierung (Replicate)",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [1340, 800],
+      "id": "format-rss-result",
+      "name": "RSS Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1000],
       "parameters": {
-        "url": "https://api.replicate.com/v1/predictions",
-        "method": "POST",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "httpHeaderAuth": {
-          "name": "Authorization",
-          "value": "Token {{ $env.REPLICATE_API_KEY }}"
-        },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "version",
-              "value": "stable-video-diffusion-img2vid-xt"
-            },
-            {
-              "name": "input.prompt",
-              "value": "={{ $json.prompt }}"
-            }
-          ]
-        }
+        "jsCode": "const data = $input.first().json;\nlet message = `📰 RSS Feed erfolgreich gelesen!\n\n📋 Feed: ${data.feed_title}\n📊 Artikel: ${data.total_items}\n\n`;\n\ndata.items.forEach((item, index) => {\n  message += `${index + 1}. ${item.title}\\n`;\n});\n\nmessage += '\\n✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
       }
     },
     {
-      "id": "cloudinary-upload",
-      "name": "Cloudinary Upload",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [1560, 800],
+      "id": "format-weather-result",
+      "name": "Wetter Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1200],
       "parameters": {
-        "url": "https://api.cloudinary.com/v1_1/{{ $env.CLOUDINARY_CLOUD_NAME }}/image/upload",
-        "method": "POST",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "httpHeaderAuth": {
-          "name": "Authorization",
-          "value": "Basic {{ Buffer.from($env.CLOUDINARY_API_KEY + ':' + $env.CLOUDINARY_API_SECRET).toString('base64') }}"
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "file",
-              "value": "={{ $json.file }}"
-            }
-          ]
-        }
+        "jsCode": "const data = $input.first().json;\nconst message = `🌤️ Wetterdaten erfolgreich abgerufen!\n\n🏙️ Stadt: ${data.city}, ${data.country}\n🌡️ Temperatur: ${data.temperature}°C\n🌡️ Gefühlt: ${data.feels_like}°C\n💧 Luftfeuchtigkeit: ${data.humidity}%\n🌪️ Wind: ${data.wind_speed} m/s\n☁️ Beschreibung: ${data.description}\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
       }
     },
     {
-      "id": "social-media-upload",
-      "name": "Social Media Upload",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [1780, 800],
+      "id": "format-qr-result",
+      "name": "QR Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1400],
       "parameters": {
-        "url": "http://localhost:5000/upload",
-        "method": "POST",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "platform",
-              "value": "={{ $json.platform }}"
-            },
-            {
-              "name": "file_path",
-              "value": "={{ $json.file_path }}"
-            },
-            {
-              "name": "caption",
-              "value": "={{ $json.caption }}"
-            }
-          ]
-        }
+        "jsCode": "const data = $input.first().json;\nconst message = `📱 QR Code erfolgreich generiert!\n\n📄 Daten: ${data.data}\n📁 Datei: ${data.filename}\n📏 Größe: ${data.size[0]}x${data.size[1]} px\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
       }
     },
     {
-      "id": "email-automation",
-      "name": "E-Mail Automation",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [2000, 800],
+      "id": "format-chart-result",
+      "name": "Chart Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1600],
       "parameters": {
-        "url": "http://localhost:5000/email/read",
-        "method": "GET",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        }
+        "jsCode": "const data = $input.first().json;\nconst message = `📊 Chart erfolgreich generiert!\n\n📈 Typ: ${data.chart_type}\n📋 Titel: ${data.title}\n📁 Datei: ${data.filename}\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
       }
     },
     {
-      "id": "success-message",
-      "name": "Erfolgsmeldung",
+      "id": "format-shorten-result",
+      "name": "Shorten Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1800],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst message = `🔗 URL erfolgreich gekürzt!\n\n🔗 Original: ${data.original_url}\n🔗 Gekürzt: ${data.short_url}\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-markdown-result",
+      "name": "Markdown Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 2000],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst message = `📝 Markdown erfolgreich generiert!\n\n📄 Typ: ${data.content_type}\n📋 Inhalt: ${data.markdown.substring(0, 200)}...\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-news-result",
+      "name": "News Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 2200],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nlet message = `📰 News Headlines erfolgreich abgerufen!\n\n📋 Kategorie: ${data.category}\n📊 Anzahl: ${data.total}\n📰 Quelle: ${data.source}\n\n`;\n\ndata.headlines.forEach((headline, index) => {\n  message += `${index + 1}. ${headline.title}\\n`;\n});\n\nmessage += '\\n✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "send-scrape-result",
+      "name": "Scrape Ergebnis senden",
       "type": "n8n-nodes-base.telegram",
-      "position": [2220, 800],
+      "position": [1340, 800],
       "parameters": {
         "operation": "sendMessage",
         "chatId": "={{ $json.chatId }}",
-        "text": "✅ Automation erfolgreich abgeschlossen!\n\n🆓 Alle Services kostenlos genutzt\n📊 Limits eingehalten\n🎉 Viel Spaß mit der Automation!"
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-rss-result",
+      "name": "RSS Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1000],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-weather-result",
+      "name": "Wetter Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1200],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-qr-result",
+      "name": "QR Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1400],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-chart-result",
+      "name": "Chart Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1600],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-shorten-result",
+      "name": "Shorten Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1800],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-markdown-result",
+      "name": "Markdown Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 2000],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-news-result",
+      "name": "News Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 2200],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
       }
     }
   ],
@@ -451,6 +778,46 @@
           },
           {
             "node": "Foto Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Scrape Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Weather Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "QR Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Chart Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Shorten Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Markdown Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "News Befehl",
             "type": "main",
             "index": 0
           }
@@ -523,66 +890,264 @@
         ]
       ]
     },
-    "KI Text Generierung (Hugging Face)": {
+    "Scrape Befehl": {
       "main": [
         [
           {
-            "node": "Cloudinary Upload",
+            "node": "Web Scraping (Kostenlos)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "KI Bild Generierung (Stability AI)": {
+    "Web Scraping (Kostenlos)": {
       "main": [
         [
           {
-            "node": "Cloudinary Upload",
+            "node": "Format Scrape Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Video Generierung (Replicate)": {
+    "Format Scrape Result": {
       "main": [
         [
           {
-            "node": "Cloudinary Upload",
+            "node": "Send Scrape Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Cloudinary Upload": {
+    "RSS Befehl": {
       "main": [
         [
           {
-            "node": "Social Media Upload",
+            "node": "RSS Feed (Kostenlos)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Social Media Upload": {
+    "RSS Feed (Kostenlos)": {
       "main": [
         [
           {
-            "node": "E-Mail Automation",
+            "node": "Format RSS Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "E-Mail Automation": {
+    "Format RSS Result": {
       "main": [
         [
           {
-            "node": "Erfolgsmeldung",
+            "node": "Send RSS Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weather Befehl": {
+      "main": [
+        [
+          {
+            "node": "Wetter API (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wetter API (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Weather Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Weather Result": {
+      "main": [
+        [
+          {
+            "node": "Send Weather Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QR Befehl": {
+      "main": [
+        [
+          {
+            "node": "QR Code Generator (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QR Code Generator (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format QR Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format QR Result": {
+      "main": [
+        [
+          {
+            "node": "Send QR Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chart Befehl": {
+      "main": [
+        [
+          {
+            "node": "Chart Generator (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chart Generator (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Chart Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Chart Result": {
+      "main": [
+        [
+          {
+            "node": "Send Chart Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shorten Befehl": {
+      "main": [
+        [
+          {
+            "node": "URL Shortener (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL Shortener (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Shorten Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Shorten Result": {
+      "main": [
+        [
+          {
+            "node": "Send Shorten Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown Befehl": {
+      "main": [
+        [
+          {
+            "node": "Markdown Generator (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown Generator (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Markdown Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Markdown Result": {
+      "main": [
+        [
+          {
+            "node": "Send Markdown Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News Befehl": {
+      "main": [
+        [
+          {
+            "node": "News Headlines (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News Headlines (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format News Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format News Result": {
+      "main": [
+        [
+          {
+            "node": "Send News Result",
             "type": "main",
             "index": 0
           }
