@@ -11,3 +11,5 @@ feedparser==6.0.10
 qrcode==7.4.2
 matplotlib==3.7.2
 pandas==2.0.3
+SpeechRecognition==3.10.0
+pydub==0.25.1

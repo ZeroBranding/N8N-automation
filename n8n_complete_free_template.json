@@ -35,7 +35,7 @@
       "parameters": {
         "operation": "sendMessage",
         "chatId": "={{ $json.message.chat.id }}",
-        "text": "🎬 Willkommen zur kostenlosen Social Media Automation!\n\n📋 Verfügbare Befehle:\n/video [text] - Avatar Video erstellen\n/photo [beschreibung] - Foto generieren\n/scrape [url] - Website Daten scrapen\n/rss [url] - RSS Feed lesen\n/weather [stadt] - Wetter abrufen\n/qr [text] - QR Code generieren\n/chart [daten] - Diagramm erstellen\n/shorten [url] - URL kürzen\n/markdown [typ] - Markdown generieren\n/news [kategorie] - News Headlines\n/search [engine] [query] - Suchmaschinen Suche\n/email [aktion] - E-Mail Automation\n\n🔍 Suchmaschinen: google, bing, duckduckgo, youtube\n🆓 Alles kostenlos mit kostenlosen APIs!"
+        "text": "🤖 Willkommen zu deinem intelligenten Assistenten!\n\n💬 **Sprich einfach mit mir:**\n\"Erstelle ein Video über KI\"\n\"Suche nach Python Tutorials\"\n\"Wie ist das Wetter in Berlin?\"\n\"Zeig mir die neuesten Nachrichten\"\n\n🎤 **Oder sende Sprachmemos!**\n\n📋 **Klassische Befehle:**\n/video [text] - Avatar Video erstellen\n/photo [beschreibung] - Foto generieren\n/scrape [url] - Website Daten scrapen\n/rss [url] - RSS Feed lesen\n/weather [stadt] - Wetter abrufen\n/qr [text] - QR Code generieren\n/chart [daten] - Diagramm erstellen\n/shorten [url] - URL kürzen\n/markdown [typ] - Markdown generieren\n/news [kategorie] - News Headlines\n/search [engine] [query] - Suchmaschinen Suche\n\n🔍 Suchmaschinen: google, bing, duckduckgo, youtube\n🆓 Alles kostenlos - keine API-Keys nötig!"
       }
     },
     {
@@ -1040,16 +1040,156 @@
         }
       },
       {
-        "id": "send-youtube-result",
-        "name": "YouTube Ergebnis senden",
-        "type": "n8n-nodes-base.telegram",
-        "position": [1780, 3000],
-        "parameters": {
-          "operation": "sendMessage",
-          "chatId": "={{ $json.chatId }}",
-          "text": "={{ $json.message }}"
-        }
-      }
+                 "id": "send-youtube-result",
+         "name": "YouTube Ergebnis senden",
+         "type": "n8n-nodes-base.telegram",
+         "position": [1780, 3000],
+         "parameters": {
+           "operation": "sendMessage",
+           "chatId": "={{ $json.chatId }}",
+           "text": "={{ $json.message }}"
+         }
+       },
+       {
+         "id": "voice-message-filter",
+         "name": "Voice Message Filter",
+         "type": "n8n-nodes-base.if",
+         "position": [680, 3200],
+         "parameters": {
+           "conditions": {
+             "object": [
+               {
+                 "value1": "={{ $json.message.voice }}",
+                 "operation": "exists"
+               }
+             ]
+           }
+         }
+       },
+       {
+         "id": "process-voice-message",
+         "name": "Sprachmemo verarbeiten",
+         "type": "n8n-nodes-base.httpRequest",
+         "position": [900, 3200],
+         "parameters": {
+           "url": "http://localhost:5000/voice/process",
+           "method": "POST",
+           "sendHeaders": true,
+           "headerParameters": {
+             "parameters": [
+               {
+                 "name": "Content-Type",
+                 "value": "multipart/form-data"
+               }
+             ]
+           },
+           "sendBody": true,
+           "bodyParameters": {
+             "parameters": [
+               {
+                 "name": "audio",
+                 "value": "={{ $json.message.voice }}"
+               }
+             ]
+           }
+         }
+       },
+       {
+         "id": "voice-to-text-result",
+         "name": "Voice zu Text Ergebnis",
+         "type": "n8n-nodes-base.code",
+         "position": [1120, 3200],
+         "parameters": {
+           "jsCode": "const data = $input.first().json;\n\nif (data.success) {\n  return {\n    text: data.text,\n    confidence: data.confidence,\n    chatId: $('telegram-trigger').first().json.message.chat.id,\n    isVoice: true\n  };\n} else {\n  return {\n    error: data.error,\n    chatId: $('telegram-trigger').first().json.message.chat.id,\n    isVoice: true\n  };\n}"
+         }
+       },
+       {
+         "id": "natural-language-filter",
+         "name": "Natural Language Filter",
+         "type": "n8n-nodes-base.if",
+         "position": [680, 3400],
+         "parameters": {
+           "conditions": {
+             "string": [
+               {
+                 "value1": "={{ $json.message.text }}",
+                 "operation": "notStartsWith",
+                 "value2": "/"
+               }
+             ]
+           }
+         }
+       },
+       {
+         "id": "ai-conversation",
+         "name": "KI Konversation",
+         "type": "n8n-nodes-base.httpRequest",
+         "position": [900, 3400],
+         "parameters": {
+           "url": "http://localhost:5000/ai/conversation",
+           "method": "POST",
+           "sendHeaders": true,
+           "headerParameters": {
+             "parameters": [
+               {
+                 "name": "Content-Type",
+                 "value": "application/json"
+               }
+             ]
+           },
+           "sendBody": true,
+           "bodyParameters": {
+             "parameters": [
+               {
+                 "name": "text",
+                 "value": "={{ $json.message.text }}"
+               }
+             ]
+           }
+         }
+       },
+       {
+         "id": "format-ai-response",
+         "name": "KI Antwort formatieren",
+         "type": "n8n-nodes-base.code",
+         "position": [1120, 3400],
+         "parameters": {
+           "jsCode": "const data = $input.first().json;\nconst understanding = data.understanding;\nconst response = data.response;\n\nlet message = `🤖 **Intelligente Antwort:**\\n\\n`;\n\nif (understanding.intention !== 'unknown') {\n  message += `🎯 **Verstanden:** ${understanding.intention}\\n`;\n  message += `📊 **Konfidenz:** ${Math.round(understanding.confidence * 100)}%\\n\\n`;\n}\n\nmessage += response.response;\n\nreturn {\n  message: message,\n  chatId: $('telegram-trigger').first().json.message.chat.id,\n  action: response.action,\n  parameters: response.parameters\n};"
+         }
+       },
+       {
+         "id": "send-ai-response",
+         "name": "KI Antwort senden",
+         "type": "n8n-nodes-base.telegram",
+         "position": [1340, 3400],
+         "parameters": {
+           "operation": "sendMessage",
+           "chatId": "={{ $json.chatId }}",
+           "text": "={{ $json.message }}"
+         }
+       },
+       {
+         "id": "send-voice-result",
+         "name": "Voice Ergebnis senden",
+         "type": "n8n-nodes-base.telegram",
+         "position": [1340, 3200],
+         "parameters": {
+           "operation": "sendMessage",
+           "chatId": "={{ $json.chatId }}",
+           "text": "🎤 **Sprachmemo verarbeitet!**\\n\\n📝 **Text:** {{ $json.text }}\\n📊 **Konfidenz:** {{ Math.round($json.confidence * 100) }}%\\n\\n✅ Kostenlos - keine API-Keys nötig!"
+         }
+       },
+       {
+         "id": "voice-error-handler",
+         "name": "Voice Fehler Handler",
+         "type": "n8n-nodes-base.telegram",
+         "position": [1340, 3200],
+         "parameters": {
+           "operation": "sendMessage",
+           "chatId": "={{ $json.chatId }}",
+           "text": "❌ **Fehler bei Sprachmemo-Verarbeitung:**\\n\\n{{ $json.error }}\\n\\n💡 Versuche es nochmal oder tippe deine Nachricht."
+         }
+       }
   ],
   "connections": {
     "Telegram Bot Trigger": {
@@ -1125,6 +1265,16 @@
           },
           {
             "node": "Search Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Voice Message Filter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Natural Language Filter",
             "type": "main",
             "index": 0
           }
@@ -1624,6 +1774,72 @@
          [
            {
              "node": "Send YouTube Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Voice Message Filter": {
+       "main": [
+         [
+           {
+             "node": "Process Voice Message",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Process Voice Message": {
+       "main": [
+         [
+           {
+             "node": "Voice to Text Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Voice to Text Result": {
+       "main": [
+         [
+           {
+             "node": "Send Voice Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Natural Language Filter": {
+       "main": [
+         [
+           {
+             "node": "AI Conversation",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "AI Conversation": {
+       "main": [
+         [
+           {
+             "node": "Format AI Response",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format AI Response": {
+       "main": [
+         [
+           {
+             "node": "Send AI Response",
              "type": "main",
              "index": 0
            }

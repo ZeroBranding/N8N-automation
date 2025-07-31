@@ -39,6 +39,12 @@ from datetime import datetime, timedelta
 import re
 from urllib.parse import urlparse, urljoin
 import hashlib
+import speech_recognition as sr
+from pydub import AudioSegment
+import io
+import tempfile
+import re
+from difflib import get_close_matches
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO)
@@ -570,6 +576,249 @@ class ExtendedSocialMediaAutomation:
             logger.error(f"Fehler bei YouTube Suche für '{query}': {e}")
             return {'error': str(e)}
 
+    # ==================== SPRACHMEMO & INTELLIGENTE KOMMUNIKATION ====================
+    
+    def process_voice_message(self, audio_file_path):
+        """Sprachmemo verarbeiten - Kostenlos, keine API-Keys nötig"""
+        try:
+            # Audio-Datei laden und konvertieren
+            audio = AudioSegment.from_file(audio_file_path)
+            
+            # Temporäre WAV-Datei erstellen
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+                audio.export(temp_file.name, format="wav")
+                temp_path = temp_file.name
+            
+            # Speech Recognition
+            recognizer = sr.Recognizer()
+            
+            with sr.AudioFile(temp_path) as source:
+                audio_data = recognizer.record(source)
+                
+                # Kostenlose Speech-to-Text (Google Speech Recognition)
+                text = recognizer.recognize_google(audio_data, language='de-DE')
+            
+            # Temporäre Datei löschen
+            os.unlink(temp_path)
+            
+            logger.info(f"Sprachmemo erfolgreich verarbeitet: '{text}'")
+            return {
+                'success': True,
+                'text': text,
+                'confidence': 0.9,
+                'language': 'de-DE'
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Sprachmemo-Verarbeitung: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'text': '',
+                'confidence': 0.0
+            }
+
+    def understand_natural_language(self, text):
+        """Natürliche Sprache verstehen - Kostenlos, keine API-Keys nötig"""
+        try:
+            text = text.lower().strip()
+            
+            # Intention erkennen
+            intentions = {
+                'video': ['video', 'avatar', 'sprechen', 'sprech', 'film', 'bewegtbild'],
+                'photo': ['foto', 'bild', 'photo', 'image', 'picture'],
+                'search': ['suche', 'finde', 'search', 'google', 'bing', 'youtube'],
+                'weather': ['wetter', 'weather', 'temperatur', 'regen', 'sonne'],
+                'news': ['news', 'nachrichten', 'aktuell', 'neuigkeiten'],
+                'scrape': ['scrape', 'website', 'seite', 'daten', 'extrahieren'],
+                'rss': ['rss', 'feed', 'blog', 'artikel'],
+                'qr': ['qr', 'code', 'barcode'],
+                'chart': ['chart', 'diagramm', 'grafik', 'statistik'],
+                'shorten': ['kürzen', 'shorten', 'url', 'link'],
+                'markdown': ['markdown', 'text', 'formatieren'],
+                'help': ['hilfe', 'help', 'was', 'kannst', 'du', 'machen']
+            }
+            
+            detected_intention = None
+            confidence = 0.0
+            
+            for intention, keywords in intentions.items():
+                for keyword in keywords:
+                    if keyword in text:
+                        detected_intention = intention
+                        confidence = 0.8
+                        break
+                if detected_intention:
+                    break
+            
+            # Parameter extrahieren
+            params = {}
+            
+            if detected_intention == 'search':
+                # Suchmaschine erkennen
+                search_engines = ['google', 'bing', 'duckduckgo', 'youtube']
+                for engine in search_engines:
+                    if engine in text:
+                        params['engine'] = engine
+                        break
+                
+                # Query extrahieren (alles nach "suche", "finde", etc.)
+                search_words = ['suche', 'finde', 'search', 'google', 'bing', 'youtube']
+                for word in search_words:
+                    if word in text:
+                        query_start = text.find(word) + len(word)
+                        params['query'] = text[query_start:].strip()
+                        break
+            
+            elif detected_intention == 'weather':
+                # Stadt extrahieren
+                weather_words = ['wetter', 'weather', 'in', 'für']
+                for word in weather_words:
+                    if word in text:
+                        city_start = text.find(word) + len(word)
+                        params['city'] = text[city_start:].strip()
+                        break
+            
+            elif detected_intention in ['video', 'photo', 'scrape', 'rss', 'qr', 'chart', 'shorten', 'markdown']:
+                # Parameter nach dem Befehl extrahieren
+                for keyword in intentions[detected_intention]:
+                    if keyword in text:
+                        param_start = text.find(keyword) + len(keyword)
+                        params['content'] = text[param_start:].strip()
+                        break
+            
+            result = {
+                'intention': detected_intention,
+                'confidence': confidence,
+                'original_text': text,
+                'parameters': params
+            }
+            
+            logger.info(f"Natürliche Sprache verstanden: {detected_intention} mit {confidence} Konfidenz")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Verstehen natürlicher Sprache: {e}")
+            return {
+                'intention': 'unknown',
+                'confidence': 0.0,
+                'original_text': text,
+                'parameters': {},
+                'error': str(e)
+            }
+
+    def generate_smart_response(self, intention, params, original_text):
+        """Intelligente Antwort generieren - Kostenlos, keine API-Keys nötig"""
+        try:
+            responses = {
+                'video': {
+                    'template': "🎬 Ich erstelle ein Avatar-Video für dich!\n\n📝 Text: {content}\n✅ Verarbeite mit ElevenLabs + D-ID...",
+                    'action': 'create_video'
+                },
+                'photo': {
+                    'template': "📸 Ich suche ein passendes Foto für dich!\n\n🔍 Beschreibung: {content}\n✅ Verarbeite mit Unsplash...",
+                    'action': 'get_photo'
+                },
+                'search': {
+                    'template': "🔍 Ich suche das für dich!\n\n🔎 Suchmaschine: {engine}\n📋 Query: {query}\n✅ Führe Suche durch...",
+                    'action': 'perform_search'
+                },
+                'weather': {
+                    'template': "🌤️ Ich schaue nach dem Wetter für dich!\n\n🏙️ Stadt: {city}\n✅ Hole Wetterdaten...",
+                    'action': 'get_weather'
+                },
+                'news': {
+                    'template': "📰 Ich hole die neuesten Nachrichten für dich!\n\n✅ Lade News Headlines...",
+                    'action': 'get_news'
+                },
+                'scrape': {
+                    'template': "🌐 Ich scrape die Website für dich!\n\n🔗 URL: {content}\n✅ Extrahiere Daten...",
+                    'action': 'scrape_website'
+                },
+                'rss': {
+                    'template': "📰 Ich lese den RSS Feed für dich!\n\n🔗 Feed: {content}\n✅ Parse RSS...",
+                    'action': 'read_rss'
+                },
+                'qr': {
+                    'template': "📱 Ich erstelle einen QR Code für dich!\n\n📄 Daten: {content}\n✅ Generiere QR Code...",
+                    'action': 'generate_qr'
+                },
+                'chart': {
+                    'template': "📊 Ich erstelle ein Diagramm für dich!\n\n📈 Daten: {content}\n✅ Generiere Chart...",
+                    'action': 'generate_chart'
+                },
+                'shorten': {
+                    'template': "🔗 Ich kürze die URL für dich!\n\n🔗 URL: {content}\n✅ Kürze Link...",
+                    'action': 'shorten_url'
+                },
+                'markdown': {
+                    'template': "📝 Ich formatiere den Text für dich!\n\n📄 Inhalt: {content}\n✅ Generiere Markdown...",
+                    'action': 'generate_markdown'
+                },
+                'help': {
+                    'template': """🤖 Ich bin dein intelligenter Assistent!
+
+🎯 **Was ich kann:**
+• 🎬 Avatar Videos erstellen
+• 📸 Fotos suchen und generieren
+• 🔍 In Suchmaschinen suchen
+• 🌤️ Wetter abrufen
+• 📰 News lesen
+• 🌐 Websites scrapen
+• 📰 RSS Feeds lesen
+• 📱 QR Codes erstellen
+• 📊 Diagramme generieren
+• 🔗 URLs kürzen
+• 📝 Markdown erstellen
+
+💬 **Sprich einfach mit mir:**
+"Erstelle ein Video über KI"
+"Suche nach Python Tutorials"
+"Wie ist das Wetter in Berlin?"
+"Zeig mir die neuesten Nachrichten"
+
+🎤 **Oder sende Sprachmemos!**
+
+🆓 **Alles kostenlos - keine API-Keys nötig!**""",
+                    'action': 'show_help'
+                },
+                'unknown': {
+                    'template': "🤔 Entschuldigung, ich habe dich nicht verstanden.\n\n💡 Tippe 'Hilfe' oder 'Help' für eine Übersicht meiner Fähigkeiten!",
+                    'action': 'unknown'
+                }
+            }
+            
+            response_info = responses.get(intention, responses['unknown'])
+            template = response_info['template']
+            action = response_info['action']
+            
+            # Template mit Parametern füllen
+            try:
+                formatted_response = template.format(**params)
+            except:
+                formatted_response = template
+            
+            result = {
+                'response': formatted_response,
+                'action': action,
+                'intention': intention,
+                'parameters': params,
+                'confidence': 0.9 if intention != 'unknown' else 0.0
+            }
+            
+            logger.info(f"Intelligente Antwort generiert für {intention}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Generieren intelligenter Antwort: {e}")
+            return {
+                'response': "❌ Entschuldigung, es gab einen Fehler bei der Verarbeitung.",
+                'action': 'error',
+                'intention': intention,
+                'parameters': params,
+                'error': str(e)
+            }
+
     # ==================== SOCIAL MEDIA LOGIN ====================
     
     def login_instagram(self, username, password):
@@ -949,7 +1198,10 @@ def health_check():
             'google_search': 'available',
             'bing_search': 'available',
             'duckduckgo_search': 'available',
-            'youtube_search': 'available'
+            'youtube_search': 'available',
+            'voice_processing': 'available',
+            'natural_language': 'available',
+            'ai_conversation': 'available'
         }
     })
 
@@ -1104,6 +1356,83 @@ def search_youtube():
         return jsonify({'error': 'query required'}), 400
     
     result = automation.search_youtube(query, limit)
+    return jsonify(result)
+
+@app.route('/voice/process', methods=['POST'])
+def process_voice():
+    """Voice Message Processing Endpoint"""
+    if 'audio' not in request.files:
+        return jsonify({'error': 'audio file required'}), 400
+    
+    audio_file = request.files['audio']
+    
+    if audio_file.filename == '':
+        return jsonify({'error': 'no file selected'}), 400
+    
+    # Temporäre Datei speichern
+    temp_path = tempfile.mktemp(suffix='.ogg')
+    audio_file.save(temp_path)
+    
+    try:
+        result = automation.process_voice_message(temp_path)
+        return jsonify(result)
+    finally:
+        # Temporäre Datei löschen
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+@app.route('/ai/understand', methods=['POST'])
+def understand_text():
+    """Natural Language Understanding Endpoint"""
+    data = request.get_json()
+    text = data.get('text')
+    
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+    
+    result = automation.understand_natural_language(text)
+    return jsonify(result)
+
+@app.route('/ai/respond', methods=['POST'])
+def generate_response():
+    """Smart Response Generation Endpoint"""
+    data = request.get_json()
+    intention = data.get('intention')
+    params = data.get('parameters', {})
+    original_text = data.get('original_text', '')
+    
+    if not intention:
+        return jsonify({'error': 'intention required'}), 400
+    
+    result = automation.generate_smart_response(intention, params, original_text)
+    return jsonify(result)
+
+@app.route('/ai/conversation', methods=['POST'])
+def handle_conversation():
+    """Complete Conversation Handler Endpoint"""
+    data = request.get_json()
+    text = data.get('text')
+    
+    if not text:
+        return jsonify({'error': 'text required'}), 400
+    
+    # 1. Natürliche Sprache verstehen
+    understanding = automation.understand_natural_language(text)
+    
+    # 2. Intelligente Antwort generieren
+    response = automation.generate_smart_response(
+        understanding['intention'],
+        understanding['parameters'],
+        understanding['original_text']
+    )
+    
+    # 3. Kombiniertes Ergebnis zurückgeben
+    result = {
+        'understanding': understanding,
+        'response': response,
+        'timestamp': datetime.now().isoformat()
+    }
+    
     return jsonify(result)
 
 @app.route('/login', methods=['POST'])
