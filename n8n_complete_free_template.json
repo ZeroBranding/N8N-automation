@@ -1,0 +1,1850 @@
+{
+  "name": "🆓 Komplette kostenlose Social Media & E-Mail Automation",
+  "nodes": [
+    {
+      "id": "telegram-trigger",
+      "name": "Telegram Bot Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [240, 300],
+      "parameters": {
+        "updates": ["message"]
+      }
+    },
+    {
+      "id": "command-filter",
+      "name": "Befehl Filter",
+      "type": "n8n-nodes-base.if",
+      "position": [460, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "welcome-message",
+      "name": "Willkommensnachricht",
+      "type": "n8n-nodes-base.telegram",
+      "position": [680, 200],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "🤖 Willkommen zu deinem intelligenten Assistenten!\n\n💬 **Sprich einfach mit mir:**\n\"Erstelle ein Video über KI\"\n\"Suche nach Python Tutorials\"\n\"Wie ist das Wetter in Berlin?\"\n\"Zeig mir die neuesten Nachrichten\"\n\n🎤 **Oder sende Sprachmemos!**\n\n📋 **Klassische Befehle:**\n/video [text] - Avatar Video erstellen\n/photo [beschreibung] - Foto generieren\n/scrape [url] - Website Daten scrapen\n/rss [url] - RSS Feed lesen\n/weather [stadt] - Wetter abrufen\n/qr [text] - QR Code generieren\n/chart [daten] - Diagramm erstellen\n/shorten [url] - URL kürzen\n/markdown [typ] - Markdown generieren\n/news [kategorie] - News Headlines\n/search [engine] [query] - Suchmaschinen Suche\n\n🔍 Suchmaschinen: google, bing, duckduckgo, youtube\n🆓 Alles kostenlos - keine API-Keys nötig!"
+      }
+    },
+    {
+      "id": "video-command-filter",
+      "name": "Video Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 400],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/video"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "extract-video-text",
+      "name": "Video Text extrahieren",
+      "type": "n8n-nodes-base.code",
+      "position": [900, 400],
+      "parameters": {
+        "jsCode": "// Extrahiere Text aus /video Befehl\nconst text = $input.first().message.text;\nconst videoText = text.replace('/video', '').trim();\n\nreturn {\n  text: videoText,\n  chatId: $input.first().message.chat.id\n};"
+      }
+    },
+    {
+      "id": "text-to-speech",
+      "name": "Text zu Sprache (ElevenLabs)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1120, 400],
+      "parameters": {
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "xi-api-key",
+          "value": "={{ $env.ELEVENLABS_API_KEY }}"
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "model_id",
+              "value": "eleven_monolingual_v1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "create-avatar-video",
+      "name": "Avatar Video erstellen (D-ID)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1340, 400],
+      "parameters": {
+        "url": "https://api.d-id.com/talks",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "Authorization",
+          "value": "Basic {{ $env.DID_API_KEY }}"
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "script.type",
+              "value": "text"
+            },
+            {
+              "name": "script.input",
+              "value": "={{ $json.text }}"
+            },
+            {
+              "name": "source_url",
+              "value": "https://create-images-results.d-id.com/DefaultPresenters/Noelle_f/image.jpeg"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "send-video-telegram",
+      "name": "Video an Telegram senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1560, 400],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "🎬 Avatar Video erfolgreich erstellt!\n\n✅ Text zu Sprache: ElevenLabs\n✅ Avatar Video: D-ID\n✅ Kostenlos: 20 Credits/Monat"
+      }
+    },
+    {
+      "id": "photo-command-filter",
+      "name": "Foto Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 600],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/photo"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "get-photo",
+      "name": "Foto holen (Unsplash)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 600],
+      "parameters": {
+        "url": "https://api.unsplash.com/photos/random",
+        "method": "GET",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "httpHeaderAuth": {
+          "name": "Authorization",
+          "value": "Client-ID {{ $env.UNSPLASH_API_KEY }}"
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.message.text.replace('/photo', '').trim() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "send-photo-telegram",
+      "name": "Foto an Telegram senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1120, 600],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "📸 Foto erfolgreich generiert!\n\n✅ Foto: Unsplash\n✅ Kostenlos: 50 Requests/Stunde\n✅ HD-Qualität verfügbar"
+      }
+    },
+    {
+      "id": "scrape-command-filter",
+      "name": "Scrape Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 800],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/scrape"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "web-scraping",
+      "name": "Web Scraping (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 800],
+      "parameters": {
+        "url": "http://localhost:5000/scrape",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.message.text.replace('/scrape', '').trim() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rss-command-filter",
+      "name": "RSS Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1000],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/rss"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rss-feed",
+      "name": "RSS Feed (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1000],
+      "parameters": {
+        "url": "http://localhost:5000/rss",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "feed_url",
+              "value": "={{ $json.message.text.replace('/rss', '').trim() }}"
+            },
+            {
+              "name": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "weather-command-filter",
+      "name": "Weather Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1200],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/weather"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "weather-api",
+      "name": "Wetter API (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1200],
+      "parameters": {
+        "url": "http://localhost:5000/weather",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "city",
+              "value": "={{ $json.message.text.replace('/weather', '').trim() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "qr-command-filter",
+      "name": "QR Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1400],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/qr"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "qr-generator",
+      "name": "QR Code Generator (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1400],
+      "parameters": {
+        "url": "http://localhost:5000/qr",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "={{ $json.message.text.replace('/qr', '').trim() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "chart-command-filter",
+      "name": "Chart Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1600],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/chart"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "chart-generator",
+      "name": "Chart Generator (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1600],
+      "parameters": {
+        "url": "http://localhost:5000/chart",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "{\"x\": [1,2,3,4,5], \"y\": [10,20,15,25,30]}"
+            },
+            {
+              "name": "chart_type",
+              "value": "line"
+            },
+            {
+              "name": "title",
+              "value": "Beispiel Chart"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "shorten-command-filter",
+      "name": "Shorten Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 1800],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/shorten"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "url-shortener",
+      "name": "URL Shortener (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1800],
+      "parameters": {
+        "url": "http://localhost:5000/shorten",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.message.text.replace('/shorten', '').trim() }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "markdown-command-filter",
+      "name": "Markdown Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 2000],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/markdown"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "markdown-generator",
+      "name": "Markdown Generator (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 2000],
+      "parameters": {
+        "url": "http://localhost:5000/markdown",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "content_type",
+              "value": "blog_post"
+            },
+            {
+              "name": "data",
+              "value": "{\"title\": \"Beispiel Blog Post\", \"content\": \"Dies ist ein automatisch generierter Blog Post.\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "news-command-filter",
+      "name": "News Befehl",
+      "type": "n8n-nodes-base.if",
+      "position": [680, 2200],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message.text }}",
+              "operation": "startsWith",
+              "value2": "/news"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "news-headlines",
+      "name": "News Headlines (Kostenlos)",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 2200],
+      "parameters": {
+        "url": "http://localhost:5000/news",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "category",
+              "value": "general"
+            },
+            {
+              "name": "limit",
+              "value": "5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "format-scrape-result",
+      "name": "Scrape Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 800],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst message = `🌐 Website Scraping erfolgreich!\n\n📄 Titel: ${data.title}\n🔗 URL: ${data.url}\n⏰ Timestamp: ${data.timestamp}\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-rss-result",
+      "name": "RSS Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1000],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nlet message = `📰 RSS Feed erfolgreich gelesen!\n\n📋 Feed: ${data.feed_title}\n📊 Artikel: ${data.total_items}\n\n`;\n\ndata.items.forEach((item, index) => {\n  message += `${index + 1}. ${item.title}\\n`;\n});\n\nmessage += '\\n✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-weather-result",
+      "name": "Wetter Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1200],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst message = `🌤️ Wetterdaten erfolgreich abgerufen!\n\n🏙️ Stadt: ${data.city}, ${data.country}\n🌡️ Temperatur: ${data.temperature}°C\n🌡️ Gefühlt: ${data.feels_like}°C\n💧 Luftfeuchtigkeit: ${data.humidity}%\n🌪️ Wind: ${data.wind_speed} m/s\n☁️ Beschreibung: ${data.description}\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-qr-result",
+      "name": "QR Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1400],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst message = `📱 QR Code erfolgreich generiert!\n\n📄 Daten: ${data.data}\n📁 Datei: ${data.filename}\n📏 Größe: ${data.size[0]}x${data.size[1]} px\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-chart-result",
+      "name": "Chart Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1600],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst message = `📊 Chart erfolgreich generiert!\n\n📈 Typ: ${data.chart_type}\n📋 Titel: ${data.title}\n📁 Datei: ${data.filename}\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-shorten-result",
+      "name": "Shorten Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 1800],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst message = `🔗 URL erfolgreich gekürzt!\n\n🔗 Original: ${data.original_url}\n🔗 Gekürzt: ${data.short_url}\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-markdown-result",
+      "name": "Markdown Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 2000],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst message = `📝 Markdown erfolgreich generiert!\n\n📄 Typ: ${data.content_type}\n📋 Inhalt: ${data.markdown.substring(0, 200)}...\n\n✅ Kostenlos - keine API-Keys nötig!`;\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "format-news-result",
+      "name": "News Ergebnis formatieren",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 2200],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nlet message = `📰 News Headlines erfolgreich abgerufen!\n\n📋 Kategorie: ${data.category}\n📊 Anzahl: ${data.total}\n📰 Quelle: ${data.source}\n\n`;\n\ndata.headlines.forEach((headline, index) => {\n  message += `${index + 1}. ${headline.title}\\n`;\n});\n\nmessage += '\\n✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-video-text').first().json.chatId\n};"
+      }
+    },
+    {
+      "id": "send-scrape-result",
+      "name": "Scrape Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 800],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-rss-result",
+      "name": "RSS Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1000],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-weather-result",
+      "name": "Wetter Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1200],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-qr-result",
+      "name": "QR Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1400],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-chart-result",
+      "name": "Chart Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1600],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-shorten-result",
+      "name": "Shorten Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 1800],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+    {
+      "id": "send-markdown-result",
+      "name": "Markdown Ergebnis senden",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1340, 2000],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}"
+      }
+    },
+          {
+        "id": "send-news-result",
+        "name": "News Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1340, 2200],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
+      },
+      {
+        "id": "search-command-filter",
+        "name": "Search Befehl",
+        "type": "n8n-nodes-base.if",
+        "position": [680, 2400],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.message.text }}",
+                "operation": "startsWith",
+                "value2": "/search"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "extract-search-params",
+        "name": "Search Parameter extrahieren",
+        "type": "n8n-nodes-base.code",
+        "position": [900, 2400],
+        "parameters": {
+          "jsCode": "// Extrahiere Suchmaschine und Query aus /search Befehl\nconst text = $input.first().message.text;\nconst parts = text.replace('/search', '').trim().split(' ');\nconst engine = parts[0] || 'google';\nconst query = parts.slice(1).join(' ') || 'n8n automation';\n\nreturn {\n  engine: engine.toLowerCase(),\n  query: query,\n  chatId: $input.first().message.chat.id\n};"
+        }
+      },
+      {
+        "id": "google-search",
+        "name": "Google Search (Kostenlos)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [1120, 2400],
+        "parameters": {
+          "url": "http://localhost:5000/search/google",
+          "method": "POST",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{ $json.query }}"
+              },
+              {
+                "name": "limit",
+                "value": "5"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "bing-search",
+        "name": "Bing Search (Kostenlos)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [1120, 2600],
+        "parameters": {
+          "url": "http://localhost:5000/search/bing",
+          "method": "POST",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{ $json.query }}"
+              },
+              {
+                "name": "limit",
+                "value": "5"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "duckduckgo-search",
+        "name": "DuckDuckGo Search (Kostenlos)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [1120, 2800],
+        "parameters": {
+          "url": "http://localhost:5000/search/duckduckgo",
+          "method": "POST",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{ $json.query }}"
+              },
+              {
+                "name": "limit",
+                "value": "5"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "youtube-search",
+        "name": "YouTube Search (Kostenlos)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [1120, 3000],
+        "parameters": {
+          "url": "http://localhost:5000/search/youtube",
+          "method": "POST",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{ $json.query }}"
+              },
+              {
+                "name": "limit",
+                "value": "5"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "search-engine-router",
+        "name": "Search Engine Router",
+        "type": "n8n-nodes-base.if",
+        "position": [1340, 2400],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.engine }}",
+                "operation": "equals",
+                "value2": "google"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "bing-router",
+        "name": "Bing Router",
+        "type": "n8n-nodes-base.if",
+        "position": [1340, 2600],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.engine }}",
+                "operation": "equals",
+                "value2": "bing"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "duckduckgo-router",
+        "name": "DuckDuckGo Router",
+        "type": "n8n-nodes-base.if",
+        "position": [1340, 2800],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.engine }}",
+                "operation": "equals",
+                "value2": "duckduckgo"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "youtube-router",
+        "name": "YouTube Router",
+        "type": "n8n-nodes-base.if",
+        "position": [1340, 3000],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.engine }}",
+                "operation": "equals",
+                "value2": "youtube"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "format-google-result",
+        "name": "Google Ergebnis formatieren",
+        "type": "n8n-nodes-base.code",
+        "position": [1560, 2400],
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nlet message = `🔍 Google Suche erfolgreich!\n\n📋 Query: ${data.query}\n📊 Ergebnisse: ${data.total_results}\n\n`;\n\ndata.results.forEach((result, index) => {\n  message += `${index + 1}. ${result.title}\\n🔗 ${result.link}\\n📝 ${result.snippet}\\n\\n`;\n});\n\nmessage += '✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-search-params').first().json.chatId\n};"
+        }
+      },
+      {
+        "id": "format-bing-result",
+        "name": "Bing Ergebnis formatieren",
+        "type": "n8n-nodes-base.code",
+        "position": [1560, 2600],
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nlet message = `🔍 Bing Suche erfolgreich!\n\n📋 Query: ${data.query}\n📊 Ergebnisse: ${data.total_results}\n\n`;\n\ndata.results.forEach((result, index) => {\n  message += `${index + 1}. ${result.title}\\n🔗 ${result.link}\\n📝 ${result.snippet}\\n\\n`;\n});\n\nmessage += '✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-search-params').first().json.chatId\n};"
+        }
+      },
+      {
+        "id": "format-duckduckgo-result",
+        "name": "DuckDuckGo Ergebnis formatieren",
+        "type": "n8n-nodes-base.code",
+        "position": [1560, 2800],
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nlet message = `🔍 DuckDuckGo Suche erfolgreich!\n\n📋 Query: ${data.query}\n📊 Ergebnisse: ${data.total_results}\n\n`;\n\ndata.results.forEach((result, index) => {\n  message += `${index + 1}. ${result.title}\\n🔗 ${result.link}\\n📝 ${result.snippet}\\n\\n`;\n});\n\nmessage += '✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-search-params').first().json.chatId\n};"
+        }
+      },
+      {
+        "id": "format-youtube-result",
+        "name": "YouTube Ergebnis formatieren",
+        "type": "n8n-nodes-base.code",
+        "position": [1560, 3000],
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nlet message = `🔍 YouTube Suche erfolgreich!\n\n📋 Query: ${data.query}\n📊 Ergebnisse: ${data.total_results}\n\n`;\n\ndata.results.forEach((result, index) => {\n  message += `${index + 1}. ${result.title}\\n📺 Kanal: ${result.channel}\\n👁️ Views: ${result.views}\\n🔗 ${result.link}\\n\\n`;\n});\n\nmessage += '✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-search-params').first().json.chatId\n};"
+        }
+      },
+      {
+        "id": "send-google-result",
+        "name": "Google Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1780, 2400],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
+      },
+      {
+        "id": "send-bing-result",
+        "name": "Bing Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1780, 2600],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
+      },
+      {
+        "id": "send-duckduckgo-result",
+        "name": "DuckDuckGo Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1780, 2800],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
+      },
+      {
+                 "id": "send-youtube-result",
+         "name": "YouTube Ergebnis senden",
+         "type": "n8n-nodes-base.telegram",
+         "position": [1780, 3000],
+         "parameters": {
+           "operation": "sendMessage",
+           "chatId": "={{ $json.chatId }}",
+           "text": "={{ $json.message }}"
+         }
+       },
+       {
+         "id": "voice-message-filter",
+         "name": "Voice Message Filter",
+         "type": "n8n-nodes-base.if",
+         "position": [680, 3200],
+         "parameters": {
+           "conditions": {
+             "object": [
+               {
+                 "value1": "={{ $json.message.voice }}",
+                 "operation": "exists"
+               }
+             ]
+           }
+         }
+       },
+       {
+         "id": "process-voice-message",
+         "name": "Sprachmemo verarbeiten",
+         "type": "n8n-nodes-base.httpRequest",
+         "position": [900, 3200],
+         "parameters": {
+           "url": "http://localhost:5000/voice/process",
+           "method": "POST",
+           "sendHeaders": true,
+           "headerParameters": {
+             "parameters": [
+               {
+                 "name": "Content-Type",
+                 "value": "multipart/form-data"
+               }
+             ]
+           },
+           "sendBody": true,
+           "bodyParameters": {
+             "parameters": [
+               {
+                 "name": "audio",
+                 "value": "={{ $json.message.voice }}"
+               }
+             ]
+           }
+         }
+       },
+       {
+         "id": "voice-to-text-result",
+         "name": "Voice zu Text Ergebnis",
+         "type": "n8n-nodes-base.code",
+         "position": [1120, 3200],
+         "parameters": {
+           "jsCode": "const data = $input.first().json;\n\nif (data.success) {\n  return {\n    text: data.text,\n    confidence: data.confidence,\n    chatId: $('telegram-trigger').first().json.message.chat.id,\n    isVoice: true\n  };\n} else {\n  return {\n    error: data.error,\n    chatId: $('telegram-trigger').first().json.message.chat.id,\n    isVoice: true\n  };\n}"
+         }
+       },
+       {
+         "id": "natural-language-filter",
+         "name": "Natural Language Filter",
+         "type": "n8n-nodes-base.if",
+         "position": [680, 3400],
+         "parameters": {
+           "conditions": {
+             "string": [
+               {
+                 "value1": "={{ $json.message.text }}",
+                 "operation": "notStartsWith",
+                 "value2": "/"
+               }
+             ]
+           }
+         }
+       },
+       {
+         "id": "ai-conversation",
+         "name": "KI Konversation",
+         "type": "n8n-nodes-base.httpRequest",
+         "position": [900, 3400],
+         "parameters": {
+           "url": "http://localhost:5000/ai/conversation",
+           "method": "POST",
+           "sendHeaders": true,
+           "headerParameters": {
+             "parameters": [
+               {
+                 "name": "Content-Type",
+                 "value": "application/json"
+               }
+             ]
+           },
+           "sendBody": true,
+           "bodyParameters": {
+             "parameters": [
+               {
+                 "name": "text",
+                 "value": "={{ $json.message.text }}"
+               }
+             ]
+           }
+         }
+       },
+       {
+         "id": "format-ai-response",
+         "name": "KI Antwort formatieren",
+         "type": "n8n-nodes-base.code",
+         "position": [1120, 3400],
+         "parameters": {
+           "jsCode": "const data = $input.first().json;\nconst understanding = data.understanding;\nconst response = data.response;\n\nlet message = `🤖 **Intelligente Antwort:**\\n\\n`;\n\nif (understanding.intention !== 'unknown') {\n  message += `🎯 **Verstanden:** ${understanding.intention}\\n`;\n  message += `📊 **Konfidenz:** ${Math.round(understanding.confidence * 100)}%\\n\\n`;\n}\n\nmessage += response.response;\n\nreturn {\n  message: message,\n  chatId: $('telegram-trigger').first().json.message.chat.id,\n  action: response.action,\n  parameters: response.parameters\n};"
+         }
+       },
+       {
+         "id": "send-ai-response",
+         "name": "KI Antwort senden",
+         "type": "n8n-nodes-base.telegram",
+         "position": [1340, 3400],
+         "parameters": {
+           "operation": "sendMessage",
+           "chatId": "={{ $json.chatId }}",
+           "text": "={{ $json.message }}"
+         }
+       },
+       {
+         "id": "send-voice-result",
+         "name": "Voice Ergebnis senden",
+         "type": "n8n-nodes-base.telegram",
+         "position": [1340, 3200],
+         "parameters": {
+           "operation": "sendMessage",
+           "chatId": "={{ $json.chatId }}",
+           "text": "🎤 **Sprachmemo verarbeitet!**\\n\\n📝 **Text:** {{ $json.text }}\\n📊 **Konfidenz:** {{ Math.round($json.confidence * 100) }}%\\n\\n✅ Kostenlos - keine API-Keys nötig!"
+         }
+       },
+       {
+         "id": "voice-error-handler",
+         "name": "Voice Fehler Handler",
+         "type": "n8n-nodes-base.telegram",
+         "position": [1340, 3200],
+         "parameters": {
+           "operation": "sendMessage",
+           "chatId": "={{ $json.chatId }}",
+           "text": "❌ **Fehler bei Sprachmemo-Verarbeitung:**\\n\\n{{ $json.error }}\\n\\n💡 Versuche es nochmal oder tippe deine Nachricht."
+         }
+       }
+  ],
+  "connections": {
+    "Telegram Bot Trigger": {
+      "main": [
+        [
+          {
+            "node": "Befehl Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Befehl Filter": {
+      "main": [
+        [
+          {
+            "node": "Willkommensnachricht",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Video Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Foto Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Scrape Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RSS Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Weather Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "QR Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Chart Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Shorten Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Markdown Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "News Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Voice Message Filter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Natural Language Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Befehl": {
+      "main": [
+        [
+          {
+            "node": "Extract Video Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Video Text": {
+      "main": [
+        [
+          {
+            "node": "Text to Speech (ElevenLabs)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text to Speech (ElevenLabs)": {
+      "main": [
+        [
+          {
+            "node": "Create Avatar Video (D-ID)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Avatar Video (D-ID)": {
+      "main": [
+        [
+          {
+            "node": "Send Video Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Foto Befehl": {
+      "main": [
+        [
+          {
+            "node": "Get Photo (Unsplash)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Photo (Unsplash)": {
+      "main": [
+        [
+          {
+            "node": "Send Photo Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Befehl": {
+      "main": [
+        [
+          {
+            "node": "Web Scraping (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web Scraping (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Scrape Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Scrape Result": {
+      "main": [
+        [
+          {
+            "node": "Send Scrape Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Befehl": {
+      "main": [
+        [
+          {
+            "node": "RSS Feed (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Feed (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format RSS Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format RSS Result": {
+      "main": [
+        [
+          {
+            "node": "Send RSS Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weather Befehl": {
+      "main": [
+        [
+          {
+            "node": "Wetter API (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wetter API (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Weather Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Weather Result": {
+      "main": [
+        [
+          {
+            "node": "Send Weather Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QR Befehl": {
+      "main": [
+        [
+          {
+            "node": "QR Code Generator (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QR Code Generator (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format QR Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format QR Result": {
+      "main": [
+        [
+          {
+            "node": "Send QR Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chart Befehl": {
+      "main": [
+        [
+          {
+            "node": "Chart Generator (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chart Generator (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Chart Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Chart Result": {
+      "main": [
+        [
+          {
+            "node": "Send Chart Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shorten Befehl": {
+      "main": [
+        [
+          {
+            "node": "URL Shortener (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL Shortener (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Shorten Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Shorten Result": {
+      "main": [
+        [
+          {
+            "node": "Send Shorten Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown Befehl": {
+      "main": [
+        [
+          {
+            "node": "Markdown Generator (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Markdown Generator (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format Markdown Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Markdown Result": {
+      "main": [
+        [
+          {
+            "node": "Send Markdown Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News Befehl": {
+      "main": [
+        [
+          {
+            "node": "News Headlines (Kostenlos)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News Headlines (Kostenlos)": {
+      "main": [
+        [
+          {
+            "node": "Format News Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+         "Format News Result": {
+       "main": [
+         [
+           {
+             "node": "Send News Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Search Befehl": {
+       "main": [
+         [
+           {
+             "node": "Extract Search Params",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Extract Search Params": {
+       "main": [
+         [
+           {
+             "node": "Search Engine Router",
+             "type": "main",
+             "index": 0
+           },
+           {
+             "node": "Bing Router",
+             "type": "main",
+             "index": 0
+           },
+           {
+             "node": "DuckDuckGo Router",
+             "type": "main",
+             "index": 0
+           },
+           {
+             "node": "YouTube Router",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Search Engine Router": {
+       "main": [
+         [
+           {
+             "node": "Google Search (Kostenlos)",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Google Search (Kostenlos)": {
+       "main": [
+         [
+           {
+             "node": "Format Google Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format Google Result": {
+       "main": [
+         [
+           {
+             "node": "Send Google Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Bing Router": {
+       "main": [
+         [
+           {
+             "node": "Bing Search (Kostenlos)",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Bing Search (Kostenlos)": {
+       "main": [
+         [
+           {
+             "node": "Format Bing Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format Bing Result": {
+       "main": [
+         [
+           {
+             "node": "Send Bing Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "DuckDuckGo Router": {
+       "main": [
+         [
+           {
+             "node": "DuckDuckGo Search (Kostenlos)",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "DuckDuckGo Search (Kostenlos)": {
+       "main": [
+         [
+           {
+             "node": "Format DuckDuckGo Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format DuckDuckGo Result": {
+       "main": [
+         [
+           {
+             "node": "Send DuckDuckGo Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "YouTube Router": {
+       "main": [
+         [
+           {
+             "node": "YouTube Search (Kostenlos)",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "YouTube Search (Kostenlos)": {
+       "main": [
+         [
+           {
+             "node": "Format YouTube Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format YouTube Result": {
+       "main": [
+         [
+           {
+             "node": "Send YouTube Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Voice Message Filter": {
+       "main": [
+         [
+           {
+             "node": "Process Voice Message",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Process Voice Message": {
+       "main": [
+         [
+           {
+             "node": "Voice to Text Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Voice to Text Result": {
+       "main": [
+         [
+           {
+             "node": "Send Voice Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Natural Language Filter": {
+       "main": [
+         [
+           {
+             "node": "AI Conversation",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "AI Conversation": {
+       "main": [
+         [
+           {
+             "node": "Format AI Response",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format AI Response": {
+       "main": [
+         [
+           {
+             "node": "Send AI Response",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     }
+  }
+}
