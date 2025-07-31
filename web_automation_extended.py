@@ -360,6 +360,216 @@ class ExtendedSocialMediaAutomation:
             logger.error(f"Fehler beim News Headlines: {e}")
             return {'error': str(e)}
 
+    def search_google(self, query, limit=10):
+        """Google Suche - Kostenlos, keine API-Keys nötig (Web Scraping)"""
+        try:
+            if not self.driver:
+                self.start_driver()
+            
+            # Google Suche URL
+            search_url = f"https://www.google.com/search?q={requests.utils.quote(query)}&num={limit}"
+            self.driver.get(search_url)
+            time.sleep(3)
+            
+            # Suchergebnisse extrahieren
+            results = []
+            search_results = self.driver.find_elements(By.CSS_SELECTOR, "div.g")
+            
+            for result in search_results[:limit]:
+                try:
+                    # Titel extrahieren
+                    title_element = result.find_element(By.CSS_SELECTOR, "h3")
+                    title = title_element.text
+                    
+                    # Link extrahieren
+                    link_element = result.find_element(By.CSS_SELECTOR, "a")
+                    link = link_element.get_attribute("href")
+                    
+                    # Snippet extrahieren
+                    snippet_element = result.find_element(By.CSS_SELECTOR, "div.VwiC3b")
+                    snippet = snippet_element.text[:200] + '...' if len(snippet_element.text) > 200 else snippet_element.text
+                    
+                    results.append({
+                        'title': title,
+                        'link': link,
+                        'snippet': snippet
+                    })
+                except:
+                    continue
+            
+            search_info = {
+                'query': query,
+                'results': results,
+                'total_results': len(results),
+                'search_engine': 'Google',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            logger.info(f"Google Suche für '{query}' erfolgreich durchgeführt")
+            return search_info
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Google Suche für '{query}': {e}")
+            return {'error': str(e)}
+
+    def search_bing(self, query, limit=10):
+        """Bing Suche - Kostenlos, keine API-Keys nötig (Web Scraping)"""
+        try:
+            if not self.driver:
+                self.start_driver()
+            
+            # Bing Suche URL
+            search_url = f"https://www.bing.com/search?q={requests.utils.quote(query)}&count={limit}"
+            self.driver.get(search_url)
+            time.sleep(3)
+            
+            # Suchergebnisse extrahieren
+            results = []
+            search_results = self.driver.find_elements(By.CSS_SELECTOR, "li.b_algo")
+            
+            for result in search_results[:limit]:
+                try:
+                    # Titel extrahieren
+                    title_element = result.find_element(By.CSS_SELECTOR, "h2 a")
+                    title = title_element.text
+                    
+                    # Link extrahieren
+                    link = title_element.get_attribute("href")
+                    
+                    # Snippet extrahieren
+                    snippet_element = result.find_element(By.CSS_SELECTOR, "p")
+                    snippet = snippet_element.text[:200] + '...' if len(snippet_element.text) > 200 else snippet_element.text
+                    
+                    results.append({
+                        'title': title,
+                        'link': link,
+                        'snippet': snippet
+                    })
+                except:
+                    continue
+            
+            search_info = {
+                'query': query,
+                'results': results,
+                'total_results': len(results),
+                'search_engine': 'Bing',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            logger.info(f"Bing Suche für '{query}' erfolgreich durchgeführt")
+            return search_info
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Bing Suche für '{query}': {e}")
+            return {'error': str(e)}
+
+    def search_duckduckgo(self, query, limit=10):
+        """DuckDuckGo Suche - Kostenlos, keine API-Keys nötig (Web Scraping)"""
+        try:
+            if not self.driver:
+                self.start_driver()
+            
+            # DuckDuckGo Suche URL
+            search_url = f"https://duckduckgo.com/?q={requests.utils.quote(query)}"
+            self.driver.get(search_url)
+            time.sleep(3)
+            
+            # Suchergebnisse extrahieren
+            results = []
+            search_results = self.driver.find_elements(By.CSS_SELECTOR, "article")
+            
+            for result in search_results[:limit]:
+                try:
+                    # Titel extrahieren
+                    title_element = result.find_element(By.CSS_SELECTOR, "h2 a")
+                    title = title_element.text
+                    
+                    # Link extrahieren
+                    link = title_element.get_attribute("href")
+                    
+                    # Snippet extrahieren
+                    snippet_element = result.find_element(By.CSS_SELECTOR, "p")
+                    snippet = snippet_element.text[:200] + '...' if len(snippet_element.text) > 200 else snippet_element.text
+                    
+                    results.append({
+                        'title': title,
+                        'link': link,
+                        'snippet': snippet
+                    })
+                except:
+                    continue
+            
+            search_info = {
+                'query': query,
+                'results': results,
+                'total_results': len(results),
+                'search_engine': 'DuckDuckGo',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            logger.info(f"DuckDuckGo Suche für '{query}' erfolgreich durchgeführt")
+            return search_info
+            
+        except Exception as e:
+            logger.error(f"Fehler bei DuckDuckGo Suche für '{query}': {e}")
+            return {'error': str(e)}
+
+    def search_youtube(self, query, limit=10):
+        """YouTube Suche - Kostenlos, keine API-Keys nötig (Web Scraping)"""
+        try:
+            if not self.driver:
+                self.start_driver()
+            
+            # YouTube Suche URL
+            search_url = f"https://www.youtube.com/results?search_query={requests.utils.quote(query)}"
+            self.driver.get(search_url)
+            time.sleep(3)
+            
+            # Suchergebnisse extrahieren
+            results = []
+            search_results = self.driver.find_elements(By.CSS_SELECTOR, "ytd-video-renderer")
+            
+            for result in search_results[:limit]:
+                try:
+                    # Titel extrahieren
+                    title_element = result.find_element(By.CSS_SELECTOR, "h3 a")
+                    title = title_element.text
+                    
+                    # Link extrahieren
+                    link = "https://www.youtube.com" + title_element.get_attribute("href")
+                    
+                    # Kanal extrahieren
+                    channel_element = result.find_element(By.CSS_SELECTOR, "ytd-channel-name a")
+                    channel = channel_element.text
+                    
+                    # Views extrahieren
+                    views_element = result.find_element(By.CSS_SELECTOR, "span.style-scope.ytd-video-meta-block")
+                    views = views_element.text
+                    
+                    results.append({
+                        'title': title,
+                        'link': link,
+                        'channel': channel,
+                        'views': views
+                    })
+                except:
+                    continue
+            
+            search_info = {
+                'query': query,
+                'results': results,
+                'total_results': len(results),
+                'search_engine': 'YouTube',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            logger.info(f"YouTube Suche für '{query}' erfolgreich durchgeführt")
+            return search_info
+            
+        except Exception as e:
+            logger.error(f"Fehler bei YouTube Suche für '{query}': {e}")
+            return {'error': str(e)}
+
     # ==================== SOCIAL MEDIA LOGIN ====================
     
     def login_instagram(self, username, password):
@@ -735,7 +945,11 @@ def health_check():
             'charts': 'available',
             'url_shortener': 'available',
             'markdown': 'available',
-            'news': 'available'
+            'news': 'available',
+            'google_search': 'available',
+            'bing_search': 'available',
+            'duckduckgo_search': 'available',
+            'youtube_search': 'available'
         }
     })
 
@@ -838,6 +1052,58 @@ def get_news():
     limit = data.get('limit', 5)
     
     result = automation.get_news_headlines(category, limit)
+    return jsonify(result)
+
+@app.route('/search/google', methods=['POST'])
+def search_google():
+    """Google Search Endpoint"""
+    data = request.get_json()
+    query = data.get('query')
+    limit = data.get('limit', 10)
+    
+    if not query:
+        return jsonify({'error': 'query required'}), 400
+    
+    result = automation.search_google(query, limit)
+    return jsonify(result)
+
+@app.route('/search/bing', methods=['POST'])
+def search_bing():
+    """Bing Search Endpoint"""
+    data = request.get_json()
+    query = data.get('query')
+    limit = data.get('limit', 10)
+    
+    if not query:
+        return jsonify({'error': 'query required'}), 400
+    
+    result = automation.search_bing(query, limit)
+    return jsonify(result)
+
+@app.route('/search/duckduckgo', methods=['POST'])
+def search_duckduckgo():
+    """DuckDuckGo Search Endpoint"""
+    data = request.get_json()
+    query = data.get('query')
+    limit = data.get('limit', 10)
+    
+    if not query:
+        return jsonify({'error': 'query required'}), 400
+    
+    result = automation.search_duckduckgo(query, limit)
+    return jsonify(result)
+
+@app.route('/search/youtube', methods=['POST'])
+def search_youtube():
+    """YouTube Search Endpoint"""
+    data = request.get_json()
+    query = data.get('query')
+    limit = data.get('limit', 10)
+    
+    if not query:
+        return jsonify({'error': 'query required'}), 400
+    
+    result = automation.search_youtube(query, limit)
     return jsonify(result)
 
 @app.route('/login', methods=['POST'])

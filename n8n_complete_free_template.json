@@ -35,7 +35,7 @@
       "parameters": {
         "operation": "sendMessage",
         "chatId": "={{ $json.message.chat.id }}",
-        "text": "🎬 Willkommen zur kostenlosen Social Media Automation!\n\n📋 Verfügbare Befehle:\n/video [text] - Avatar Video erstellen\n/photo [beschreibung] - Foto generieren\n/scrape [url] - Website Daten scrapen\n/rss [url] - RSS Feed lesen\n/weather [stadt] - Wetter abrufen\n/qr [text] - QR Code generieren\n/chart [daten] - Diagramm erstellen\n/shorten [url] - URL kürzen\n/markdown [typ] - Markdown generieren\n/news [kategorie] - News Headlines\n/email [aktion] - E-Mail Automation\n\n🆓 Alles kostenlos mit kostenlosen APIs!"
+        "text": "🎬 Willkommen zur kostenlosen Social Media Automation!\n\n📋 Verfügbare Befehle:\n/video [text] - Avatar Video erstellen\n/photo [beschreibung] - Foto generieren\n/scrape [url] - Website Daten scrapen\n/rss [url] - RSS Feed lesen\n/weather [stadt] - Wetter abrufen\n/qr [text] - QR Code generieren\n/chart [daten] - Diagramm erstellen\n/shorten [url] - URL kürzen\n/markdown [typ] - Markdown generieren\n/news [kategorie] - News Headlines\n/search [engine] [query] - Suchmaschinen Suche\n/email [aktion] - E-Mail Automation\n\n🔍 Suchmaschinen: google, bing, duckduckgo, youtube\n🆓 Alles kostenlos mit kostenlosen APIs!"
       }
     },
     {
@@ -737,17 +737,319 @@
         "text": "={{ $json.message }}"
       }
     },
-    {
-      "id": "send-news-result",
-      "name": "News Ergebnis senden",
-      "type": "n8n-nodes-base.telegram",
-      "position": [1340, 2200],
-      "parameters": {
-        "operation": "sendMessage",
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.message }}"
+          {
+        "id": "send-news-result",
+        "name": "News Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1340, 2200],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
+      },
+      {
+        "id": "search-command-filter",
+        "name": "Search Befehl",
+        "type": "n8n-nodes-base.if",
+        "position": [680, 2400],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.message.text }}",
+                "operation": "startsWith",
+                "value2": "/search"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "extract-search-params",
+        "name": "Search Parameter extrahieren",
+        "type": "n8n-nodes-base.code",
+        "position": [900, 2400],
+        "parameters": {
+          "jsCode": "// Extrahiere Suchmaschine und Query aus /search Befehl\nconst text = $input.first().message.text;\nconst parts = text.replace('/search', '').trim().split(' ');\nconst engine = parts[0] || 'google';\nconst query = parts.slice(1).join(' ') || 'n8n automation';\n\nreturn {\n  engine: engine.toLowerCase(),\n  query: query,\n  chatId: $input.first().message.chat.id\n};"
+        }
+      },
+      {
+        "id": "google-search",
+        "name": "Google Search (Kostenlos)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [1120, 2400],
+        "parameters": {
+          "url": "http://localhost:5000/search/google",
+          "method": "POST",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{ $json.query }}"
+              },
+              {
+                "name": "limit",
+                "value": "5"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "bing-search",
+        "name": "Bing Search (Kostenlos)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [1120, 2600],
+        "parameters": {
+          "url": "http://localhost:5000/search/bing",
+          "method": "POST",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{ $json.query }}"
+              },
+              {
+                "name": "limit",
+                "value": "5"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "duckduckgo-search",
+        "name": "DuckDuckGo Search (Kostenlos)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [1120, 2800],
+        "parameters": {
+          "url": "http://localhost:5000/search/duckduckgo",
+          "method": "POST",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{ $json.query }}"
+              },
+              {
+                "name": "limit",
+                "value": "5"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "youtube-search",
+        "name": "YouTube Search (Kostenlos)",
+        "type": "n8n-nodes-base.httpRequest",
+        "position": [1120, 3000],
+        "parameters": {
+          "url": "http://localhost:5000/search/youtube",
+          "method": "POST",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "query",
+                "value": "={{ $json.query }}"
+              },
+              {
+                "name": "limit",
+                "value": "5"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "search-engine-router",
+        "name": "Search Engine Router",
+        "type": "n8n-nodes-base.if",
+        "position": [1340, 2400],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.engine }}",
+                "operation": "equals",
+                "value2": "google"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "bing-router",
+        "name": "Bing Router",
+        "type": "n8n-nodes-base.if",
+        "position": [1340, 2600],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.engine }}",
+                "operation": "equals",
+                "value2": "bing"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "duckduckgo-router",
+        "name": "DuckDuckGo Router",
+        "type": "n8n-nodes-base.if",
+        "position": [1340, 2800],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.engine }}",
+                "operation": "equals",
+                "value2": "duckduckgo"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "youtube-router",
+        "name": "YouTube Router",
+        "type": "n8n-nodes-base.if",
+        "position": [1340, 3000],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.engine }}",
+                "operation": "equals",
+                "value2": "youtube"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "format-google-result",
+        "name": "Google Ergebnis formatieren",
+        "type": "n8n-nodes-base.code",
+        "position": [1560, 2400],
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nlet message = `🔍 Google Suche erfolgreich!\n\n📋 Query: ${data.query}\n📊 Ergebnisse: ${data.total_results}\n\n`;\n\ndata.results.forEach((result, index) => {\n  message += `${index + 1}. ${result.title}\\n🔗 ${result.link}\\n📝 ${result.snippet}\\n\\n`;\n});\n\nmessage += '✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-search-params').first().json.chatId\n};"
+        }
+      },
+      {
+        "id": "format-bing-result",
+        "name": "Bing Ergebnis formatieren",
+        "type": "n8n-nodes-base.code",
+        "position": [1560, 2600],
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nlet message = `🔍 Bing Suche erfolgreich!\n\n📋 Query: ${data.query}\n📊 Ergebnisse: ${data.total_results}\n\n`;\n\ndata.results.forEach((result, index) => {\n  message += `${index + 1}. ${result.title}\\n🔗 ${result.link}\\n📝 ${result.snippet}\\n\\n`;\n});\n\nmessage += '✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-search-params').first().json.chatId\n};"
+        }
+      },
+      {
+        "id": "format-duckduckgo-result",
+        "name": "DuckDuckGo Ergebnis formatieren",
+        "type": "n8n-nodes-base.code",
+        "position": [1560, 2800],
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nlet message = `🔍 DuckDuckGo Suche erfolgreich!\n\n📋 Query: ${data.query}\n📊 Ergebnisse: ${data.total_results}\n\n`;\n\ndata.results.forEach((result, index) => {\n  message += `${index + 1}. ${result.title}\\n🔗 ${result.link}\\n📝 ${result.snippet}\\n\\n`;\n});\n\nmessage += '✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-search-params').first().json.chatId\n};"
+        }
+      },
+      {
+        "id": "format-youtube-result",
+        "name": "YouTube Ergebnis formatieren",
+        "type": "n8n-nodes-base.code",
+        "position": [1560, 3000],
+        "parameters": {
+          "jsCode": "const data = $input.first().json;\nlet message = `🔍 YouTube Suche erfolgreich!\n\n📋 Query: ${data.query}\n📊 Ergebnisse: ${data.total_results}\n\n`;\n\ndata.results.forEach((result, index) => {\n  message += `${index + 1}. ${result.title}\\n📺 Kanal: ${result.channel}\\n👁️ Views: ${result.views}\\n🔗 ${result.link}\\n\\n`;\n});\n\nmessage += '✅ Kostenlos - keine API-Keys nötig!';\n\nreturn {\n  message: message,\n  chatId: $('extract-search-params').first().json.chatId\n};"
+        }
+      },
+      {
+        "id": "send-google-result",
+        "name": "Google Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1780, 2400],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
+      },
+      {
+        "id": "send-bing-result",
+        "name": "Bing Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1780, 2600],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
+      },
+      {
+        "id": "send-duckduckgo-result",
+        "name": "DuckDuckGo Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1780, 2800],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
+      },
+      {
+        "id": "send-youtube-result",
+        "name": "YouTube Ergebnis senden",
+        "type": "n8n-nodes-base.telegram",
+        "position": [1780, 3000],
+        "parameters": {
+          "operation": "sendMessage",
+          "chatId": "={{ $json.chatId }}",
+          "text": "={{ $json.message }}"
+        }
       }
-    }
   ],
   "connections": {
     "Telegram Bot Trigger": {
@@ -818,6 +1120,11 @@
           },
           {
             "node": "News Befehl",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Befehl",
             "type": "main",
             "index": 0
           }
@@ -1143,16 +1450,185 @@
         ]
       ]
     },
-    "Format News Result": {
-      "main": [
-        [
-          {
-            "node": "Send News Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+         "Format News Result": {
+       "main": [
+         [
+           {
+             "node": "Send News Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Search Befehl": {
+       "main": [
+         [
+           {
+             "node": "Extract Search Params",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Extract Search Params": {
+       "main": [
+         [
+           {
+             "node": "Search Engine Router",
+             "type": "main",
+             "index": 0
+           },
+           {
+             "node": "Bing Router",
+             "type": "main",
+             "index": 0
+           },
+           {
+             "node": "DuckDuckGo Router",
+             "type": "main",
+             "index": 0
+           },
+           {
+             "node": "YouTube Router",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Search Engine Router": {
+       "main": [
+         [
+           {
+             "node": "Google Search (Kostenlos)",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Google Search (Kostenlos)": {
+       "main": [
+         [
+           {
+             "node": "Format Google Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format Google Result": {
+       "main": [
+         [
+           {
+             "node": "Send Google Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Bing Router": {
+       "main": [
+         [
+           {
+             "node": "Bing Search (Kostenlos)",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Bing Search (Kostenlos)": {
+       "main": [
+         [
+           {
+             "node": "Format Bing Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format Bing Result": {
+       "main": [
+         [
+           {
+             "node": "Send Bing Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "DuckDuckGo Router": {
+       "main": [
+         [
+           {
+             "node": "DuckDuckGo Search (Kostenlos)",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "DuckDuckGo Search (Kostenlos)": {
+       "main": [
+         [
+           {
+             "node": "Format DuckDuckGo Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format DuckDuckGo Result": {
+       "main": [
+         [
+           {
+             "node": "Send DuckDuckGo Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "YouTube Router": {
+       "main": [
+         [
+           {
+             "node": "YouTube Search (Kostenlos)",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "YouTube Search (Kostenlos)": {
+       "main": [
+         [
+           {
+             "node": "Format YouTube Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     },
+     "Format YouTube Result": {
+       "main": [
+         [
+           {
+             "node": "Send YouTube Result",
+             "type": "main",
+             "index": 0
+           }
+         ]
+       ]
+     }
   }
 }
