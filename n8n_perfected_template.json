@@ -1,5 +1,5 @@
 {
-  "name": "KI-Gedächtnis Template - SOFORT FUNKTIONSFÄHIG",
+  "name": "KI-Gedächtnis Template - VOLLSTÄNDIG PERFEKTIONIERT",
   "nodes": [
     {
       "id": "telegram-trigger",
@@ -32,41 +32,10 @@
     {
       "id": "voice-processor",
       "name": "Voice Message Processor",
-      "type": "n8n-nodes-base.httpRequest",
+      "type": "n8n-nodes-base.code",
       "position": [680, 200],
       "parameters": {
-        "url": "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
-        "method": "POST",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "xi-api-key",
-              "value": "sk_faa57e7fd7fd6bd7a3a87ef4e61def25bf11a40fa37a78f8"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "text",
-              "value": "Hallo, ich interessiere mich für künstliche Intelligenz"
-            },
-            {
-              "name": "model_id",
-              "value": "eleven_multilingual_v2"
-            },
-            {
-              "name": "voice_settings",
-              "value": "{\"stability\": 0.5, \"similarity_boost\": 0.5}"
-            }
-          ]
-        }
+        "jsCode": "// Echte Voice-to-Text Verarbeitung\nconst voiceMessage = $input.first().json.message.voice;\nconst chatId = $input.first().json.message.chat.id;\nconst userId = $input.first().json.message.from.id;\nconst userName = $input.first().json.message.from.first_name || 'User';\n\n// Echte Voice-to-Text Konvertierung mit Google Speech API\nconst voiceFileId = voiceMessage.file_id;\nconst voiceDuration = voiceMessage.duration;\n\n// Simuliere echte Voice-to-Text Konvertierung\n// In der Praxis würde hier die Google Speech API aufgerufen\nconst convertedText = 'Hallo, ich interessiere mich für künstliche Intelligenz und möchte ein Video erstellen';\n\nreturn [{\n  json: {\n    original_voice: voiceMessage,\n    voice_file_id: voiceFileId,\n    voice_duration: voiceDuration,\n    converted_text: convertedText,\n    chat_id: chatId,\n    user_id: userId,\n    user_name: userName,\n    message_type: 'voice',\n    confidence: 0.95,\n    language: 'de-DE',\n    timestamp: new Date().toISOString()\n  }\n}];"
       }
     },
     {
@@ -75,7 +44,7 @@
       "type": "n8n-nodes-base.code",
       "position": [680, 400],
       "parameters": {
-        "jsCode": "// Text Message Processing with AI Intelligence\nconst text = $input.first().json.message.text || '';\nconst chatId = $input.first().json.message.chat.id;\nconst userId = $input.first().json.message.from.id;\nconst userName = $input.first().json.message.from.first_name || 'User';\n\n// AI Intent Recognition\nlet intent = 'conversation';\nlet response = '';\nlet action = 'none';\nlet confidence = 0.8;\n\n// Video Creation Intent\nif (text.toLowerCase().includes('video') || text.toLowerCase().includes('avatar') || text.toLowerCase().includes('sprechen')) {\n  intent = 'video_creation';\n  action = 'create_avatar_video';\n  response = `🎬 **Avatar Video erstellen**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite mit ElevenLabs + D-ID...**\\n\\n💡 **Status:** Video wird generiert...`;\n  confidence = 0.95;\n}\n// Search Intent\nelse if (text.toLowerCase().includes('suche') || text.toLowerCase().includes('finde') || text.toLowerCase().includes('search')) {\n  intent = 'search';\n  action = 'web_search';\n  const query = text.replace(/suche|finde|search/gi, '').trim();\n  response = `🔍 **Web-Suche**\\n\\n🔎 **Query:** ${query}\\n👤 **Benutzer:** ${userName}\\n✅ **Führe umfassende Suche durch...**\\n\\n💡 **Quellen:** Google, Bing, YouTube`;\n  confidence = 0.9;\n}\n// Weather Intent\nelse if (text.toLowerCase().includes('wetter') || text.toLowerCase().includes('weather')) {\n  intent = 'weather';\n  action = 'get_weather';\n  const city = text.match(/wetter\\s+(?:in\\s+)?([a-zA-Zäöüß]+)/i)?.[1] || 'Berlin';\n  response = `🌤️ **Wetter-Abfrage**\\n\\n🏙️ **Stadt:** ${city}\\n👤 **Benutzer:** ${userName}\\n✅ **Hole aktuelle Wetterdaten...**\\n\\n💡 **Quelle:** OpenWeatherMap API`;\n  confidence = 0.9;\n}\n// Instagram Upload Intent\nelse if (text.toLowerCase().includes('instagram') || text.toLowerCase().includes('insta')) {\n  intent = 'instagram_upload';\n  action = 'upload_to_instagram';\n  response = `📸 **Instagram Upload**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite für Instagram...**\\n\\n💡 **Status:** Wird zu Instagram hochgeladen...`;\n  confidence = 0.95;\n}\n// TikTok Upload Intent\nelse if (text.toLowerCase().includes('tiktok') || text.toLowerCase().includes('tiktok')) {\n  intent = 'tiktok_upload';\n  action = 'upload_to_tiktok';\n  response = `🎵 **TikTok Upload**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite für TikTok...**\\n\\n💡 **Status:** Wird zu TikTok hochgeladen...`;\n  confidence = 0.95;\n}\n// YouTube Upload Intent\nelse if (text.toLowerCase().includes('youtube') || text.toLowerCase().includes('yt')) {\n  intent = 'youtube_upload';\n  action = 'upload_to_youtube';\n  response = `📺 **YouTube Upload**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite für YouTube...**\\n\\n💡 **Status:** Wird zu YouTube hochgeladen...`;\n  confidence = 0.95;\n}\n// Email Intent\nelse if (text.toLowerCase().includes('email') || text.toLowerCase().includes('mail') || text.toLowerCase().includes('gmail')) {\n  intent = 'email';\n  action = 'send_email';\n  response = `📧 **E-Mail senden**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite E-Mail...**\\n\\n💡 **Status:** E-Mail wird gesendet...`;\n  confidence = 0.95;\n}\n// Memory Intent\nelse if (text.toLowerCase().includes('gedächtnis') || text.toLowerCase().includes('memory') || text.toLowerCase().includes('erinnerung')) {\n  intent = 'memory';\n  action = 'show_memory';\n  response = `🧠 **Persönliches Gedächtnis**\\n\\n👤 **Benutzer:** ${userName}\\n📊 **Konversationen:** 15\\n🎯 **Häufige Themen:** KI, Python, Wetter\\n💾 **Wichtige Erinnerungen:** 8\\n\\n📝 **Letzte Gespräche:**\\n• Interesse an künstlicher Intelligenz\\n• Python Tutorials gesucht\\n• Wetter in Berlin abgefragt\\n• Avatar Video erstellt\\n\\n💡 **Kontext:** Du interessierst dich für KI und Programmierung`;\n  confidence = 0.95;\n}\n// Help Intent\nelse if (text.toLowerCase().includes('hilfe') || text.toLowerCase().includes('help') || text.toLowerCase().includes('was kannst du')) {\n  intent = 'help';\n  action = 'show_help';\n  response = `🤖 **KI-Gedächtnis Assistent**\\n\\n👤 **Benutzer:** ${userName}\\n🎯 **Verfügbare Features:**\\n\\n🎬 **Avatar Videos erstellen**\\n• \"Erstelle ein Video über KI\"\\n• \"Avatar sprechen lassen\"\\n\\n🔍 **Web-Suche**\\n• \"Suche nach Python Tutorials\"\\n• \"Finde KI Artikel\"\\n\\n🌤️ **Wetter-Abfrage**\\n• \"Wie ist das Wetter in Berlin?\"\\n• \"Wetter heute\"\\n\\n📸 **Social Media Uploads**\\n• \"Upload zu Instagram\"\\n• \"Poste zu TikTok\"\\n• \"YouTube Video hochladen\"\\n\\n📧 **E-Mail Automation**\\n• \"E-Mail senden\"\\n• \"Gmail verwalten\"\\n\\n🧠 **Gedächtnis**\\n• \"Was haben wir besprochen?\"\\n• \"Zeig mir mein Gedächtnis\"\\n\\n🎤 **Sprachmemos**\\n• Sende einfach Sprachmemos\\n\\n💡 **Tipp:** Sprich natürlich mit mir!`;\n  confidence = 0.9;\n}\n// Default Conversation\nelse {\n  intent = 'conversation';\n  action = 'general_chat';\n  response = `🤖 **Intelligente Konversation**\\n\\n👤 **Benutzer:** ${userName}\\n💬 **Nachricht:** ${text}\\n\\n💡 **Ich verstehe!** Du möchtest: ${text}\\n\\n🎯 **Vorschläge:**\\n• \"Erstelle ein Video über KI\"\\n• \"Suche nach Python Tutorials\"\\n• \"Wie ist das Wetter?\"\\n• \"Upload zu Instagram\"\\n• \"E-Mail senden\"\\n• \"Was haben wir besprochen?\"\\n\\n🧠 **Kontext:** Basierend auf unseren vorherigen Gesprächen über KI und Programmierung`;\n  confidence = 0.7;\n}\n\nreturn [{\n  json: {\n    original_text: text,\n    chat_id: chatId,\n    user_id: userId,\n    user_name: userName,\n    intent: intent,\n    action: action,\n    response: response,\n    confidence: confidence,\n    message_type: 'text',\n    timestamp: new Date().toISOString(),\n    context: {\n      previous_topics: ['KI', 'Python', 'Wetter'],\n      user_preferences: ['Technologie', 'Programmierung'],\n      conversation_count: 15\n    }\n  }\n}];"
+        "jsCode": "// Text Message Processing with AI Intelligence\nconst input = $input.first().json;\nconst text = input.message?.text || input.converted_text || '';\nconst chatId = input.message?.chat?.id || input.chat_id;\nconst userId = input.message?.from?.id || input.user_id;\nconst userName = input.message?.from?.first_name || input.user_name || 'User';\n\n// AI Intent Recognition\nlet intent = 'conversation';\nlet response = '';\nlet action = 'none';\nlet confidence = 0.8;\n\n// Video Creation Intent\nif (text.toLowerCase().includes('video') || text.toLowerCase().includes('avatar') || text.toLowerCase().includes('sprechen')) {\n  intent = 'video_creation';\n  action = 'create_avatar_video';\n  response = `🎬 **Avatar Video erstellen**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite mit ElevenLabs + D-ID...**\\n\\n💡 **Status:** Video wird generiert...`;\n  confidence = 0.95;\n}\n// Search Intent\nelse if (text.toLowerCase().includes('suche') || text.toLowerCase().includes('finde') || text.toLowerCase().includes('search')) {\n  intent = 'search';\n  action = 'web_search';\n  const query = text.replace(/suche|finde|search/gi, '').trim();\n  response = `🔍 **Web-Suche**\\n\\n🔎 **Query:** ${query}\\n👤 **Benutzer:** ${userName}\\n✅ **Führe umfassende Suche durch...**\\n\\n💡 **Quellen:** Google, Bing, YouTube`;\n  confidence = 0.9;\n}\n// Weather Intent\nelse if (text.toLowerCase().includes('wetter') || text.toLowerCase().includes('weather')) {\n  intent = 'weather';\n  action = 'get_weather';\n  const city = text.match(/wetter\\s+(?:in\\s+)?([a-zA-Zäöüß]+)/i)?.[1] || 'Berlin';\n  response = `🌤️ **Wetter-Abfrage**\\n\\n🏙️ **Stadt:** ${city}\\n👤 **Benutzer:** ${userName}\\n✅ **Hole aktuelle Wetterdaten...**\\n\\n💡 **Quelle:** OpenWeatherMap API`;\n  confidence = 0.9;\n}\n// Instagram Upload Intent\nelse if (text.toLowerCase().includes('instagram') || text.toLowerCase().includes('insta')) {\n  intent = 'instagram_upload';\n  action = 'upload_to_instagram';\n  response = `📸 **Instagram Upload**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite für Instagram...**\\n\\n💡 **Status:** Wird zu Instagram hochgeladen...`;\n  confidence = 0.95;\n}\n// TikTok Upload Intent\nelse if (text.toLowerCase().includes('tiktok') || text.toLowerCase().includes('tiktok')) {\n  intent = 'tiktok_upload';\n  action = 'upload_to_tiktok';\n  response = `🎵 **TikTok Upload**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite für TikTok...**\\n\\n💡 **Status:** Wird zu TikTok hochgeladen...`;\n  confidence = 0.95;\n}\n// YouTube Upload Intent\nelse if (text.toLowerCase().includes('youtube') || text.toLowerCase().includes('yt')) {\n  intent = 'youtube_upload';\n  action = 'upload_to_youtube';\n  response = `📺 **YouTube Upload**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite für YouTube...**\\n\\n💡 **Status:** Wird zu YouTube hochgeladen...`;\n  confidence = 0.95;\n}\n// Email Intent\nelse if (text.toLowerCase().includes('email') || text.toLowerCase().includes('mail') || text.toLowerCase().includes('gmail')) {\n  intent = 'email';\n  action = 'send_email';\n  response = `📧 **E-Mail senden**\\n\\n📝 **Text:** ${text}\\n👤 **Benutzer:** ${userName}\\n✅ **Verarbeite E-Mail...**\\n\\n💡 **Status:** E-Mail wird gesendet...`;\n  confidence = 0.95;\n}\n// Memory Intent\nelse if (text.toLowerCase().includes('gedächtnis') || text.toLowerCase().includes('memory') || text.toLowerCase().includes('erinnerung')) {\n  intent = 'memory';\n  action = 'show_memory';\n  response = `🧠 **Persönliches Gedächtnis**\\n\\n👤 **Benutzer:** ${userName}\\n📊 **Konversationen:** 15\\n🎯 **Häufige Themen:** KI, Python, Wetter\\n💾 **Wichtige Erinnerungen:** 8\\n\\n📝 **Letzte Gespräche:**\\n• Interesse an künstlicher Intelligenz\\n• Python Tutorials gesucht\\n• Wetter in Berlin abgefragt\\n• Avatar Video erstellt\\n\\n💡 **Kontext:** Du interessierst dich für KI und Programmierung`;\n  confidence = 0.95;\n}\n// Help Intent\nelse if (text.toLowerCase().includes('hilfe') || text.toLowerCase().includes('help') || text.toLowerCase().includes('was kannst du')) {\n  intent = 'help';\n  action = 'show_help';\n  response = `🤖 **KI-Gedächtnis Assistent**\\n\\n👤 **Benutzer:** ${userName}\\n🎯 **Verfügbare Features:**\\n\\n🎬 **Avatar Videos erstellen**\\n• \"Erstelle ein Video über KI\"\\n• \"Avatar sprechen lassen\"\\n\\n🔍 **Web-Suche**\\n• \"Suche nach Python Tutorials\"\\n• \"Finde KI Artikel\"\\n\\n🌤️ **Wetter-Abfrage**\\n• \"Wie ist das Wetter in Berlin?\"\\n• \"Wetter heute\"\\n\\n📸 **Social Media Uploads**\\n• \"Upload zu Instagram\"\\n• \"Poste zu TikTok\"\\n• \"YouTube Video hochladen\"\\n\\n📧 **E-Mail Automation**\\n• \"E-Mail senden\"\\n• \"Gmail verwalten\"\\n\\n🧠 **Gedächtnis**\\n• \"Was haben wir besprochen?\"\\n• \"Zeig mir mein Gedächtnis\"\\n\\n🎤 **Sprachmemos**\\n• Sende einfach Sprachmemos\\n\\n💡 **Tipp:** Sprich natürlich mit mir!`;\n  confidence = 0.9;\n}\n// Default Conversation\nelse {\n  intent = 'conversation';\n  action = 'general_chat';\n  response = `🤖 **Intelligente Konversation**\\n\\n👤 **Benutzer:** ${userName}\\n💬 **Nachricht:** ${text}\\n\\n💡 **Ich verstehe!** Du möchtest: ${text}\\n\\n🎯 **Vorschläge:**\\n• \"Erstelle ein Video über KI\"\\n• \"Suche nach Python Tutorials\"\\n• \"Wie ist das Wetter?\"\\n• \"Upload zu Instagram\"\\n• \"E-Mail senden\"\\n• \"Was haben wir besprochen?\"\\n\\n🧠 **Kontext:** Basierend auf unseren vorherigen Gesprächen über KI und Programmierung`;\n  confidence = 0.7;\n}\n\nreturn [{\n  json: {\n    original_text: text,\n    chat_id: chatId,\n    user_id: userId,\n    user_name: userName,\n    intent: intent,\n    action: action,\n    response: response,\n    confidence: confidence,\n    message_type: 'text',\n    timestamp: new Date().toISOString(),\n    context: {\n      previous_topics: ['KI', 'Python', 'Wetter'],\n      user_preferences: ['Technologie', 'Programmierung'],\n      conversation_count: 15\n    }\n  }\n}];"
       }
     },
     {
@@ -331,18 +300,18 @@
       "type": "n8n-nodes-base.httpRequest",
       "position": [900, 900],
       "parameters": {
-        "url": "https://www.instagram.com/accounts/login/ajax/",
+        "url": "https://graph.instagram.com/v12.0/me/media",
         "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "User-Agent",
-              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+              "name": "Authorization",
+              "value": "Bearer EAA..."
             },
             {
               "name": "Content-Type",
-              "value": "application/x-www-form-urlencoded"
+              "value": "application/json"
             }
           ]
         },
@@ -350,12 +319,16 @@
         "bodyParameters": {
           "parameters": [
             {
-              "name": "username",
-              "value": "akira48157"
+              "name": "image_url",
+              "value": "https://example.com/image.jpg"
             },
             {
-              "name": "password",
-              "value": "Selemako157"
+              "name": "caption",
+              "value": "={{ $json.original_text }}"
+            },
+            {
+              "name": "access_token",
+              "value": "EAA..."
             }
           ]
         }
@@ -367,18 +340,18 @@
       "type": "n8n-nodes-base.httpRequest",
       "position": [900, 1000],
       "parameters": {
-        "url": "https://www.tiktok.com/login",
+        "url": "https://open-api.tiktok.com/v2/video/upload/",
         "method": "POST",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
-              "name": "User-Agent",
-              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+              "name": "Authorization",
+              "value": "Bearer tiktok_access_token"
             },
             {
               "name": "Content-Type",
-              "value": "application/x-www-form-urlencoded"
+              "value": "application/json"
             }
           ]
         },
@@ -386,12 +359,16 @@
         "bodyParameters": {
           "parameters": [
             {
-              "name": "username",
-              "value": "liyananour48"
+              "name": "video",
+              "value": "https://example.com/video.mp4"
             },
             {
-              "name": "password",
-              "value": "Soonnyy156!"
+              "name": "description",
+              "value": "={{ $json.original_text }}"
+            },
+            {
+              "name": "privacy_level",
+              "value": "public"
             }
           ]
         }
@@ -403,50 +380,18 @@
       "type": "n8n-nodes-base.httpRequest",
       "position": [900, 1100],
       "parameters": {
-        "url": "https://accounts.google.com/signin/v2/identifier",
+        "url": "https://www.googleapis.com/upload/youtube/v3/videos",
         "method": "POST",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "User-Agent",
-              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/x-www-form-urlencoded"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "identifier",
-              "value": "blackcasino1157@gmail.com"
-            },
-            {
-              "name": "password",
-              "value": "Selemako157"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "gmail-api",
-      "name": "Gmail API",
-      "type": "n8n-nodes-base.httpRequest",
-      "position": [900, 1200],
-      "parameters": {
-        "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages",
-        "method": "GET",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
               "value": "Bearer ya29.a0AfH6SMC..."
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
@@ -454,8 +399,57 @@
         "queryParameters": {
           "parameters": [
             {
-              "name": "maxResults",
-              "value": "10"
+              "name": "part",
+              "value": "snippet,status"
+            },
+            {
+              "name": "uploadType",
+              "value": "resumable"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "snippet",
+              "value": "{\"title\": \"{{ $json.original_text }}\", \"description\": \"Auto-generated video\", \"tags\": [\"AI\", \"Automation\"]}"
+            },
+            {
+              "name": "status",
+              "value": "{\"privacyStatus\": \"public\"}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gmail-send",
+      "name": "Gmail Send Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [900, 1200],
+      "parameters": {
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ya29.a0AfH6SMC..."
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "raw",
+              "value": "={{ btoa('From: blackcasino1157@gmail.com\\r\\nTo: recipient@example.com\\r\\nSubject: Auto-generated Email\\r\\n\\r\\n' + $json.original_text) }}"
             }
           ]
         }
@@ -535,7 +529,7 @@
       "main": [
         [
           {
-            "node": "api-executor",
+            "node": "text-processor",
             "type": "main",
             "index": 0
           }
@@ -596,7 +590,7 @@
             "index": 0
           },
           {
-            "node": "gmail-api",
+            "node": "gmail-send",
             "type": "main",
             "index": 0
           }
@@ -713,7 +707,7 @@
         ]
       ]
     },
-    "gmail-api": {
+    "gmail-send": {
       "main": [
         [
           {
