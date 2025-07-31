@@ -1,5 +1,5 @@
 {
-  "name": "KI-Gedächtnis Template - VOLLSTÄNDIGE APIs",
+  "name": "KI-Gedächtnis Template - SOFORT FUNKTIONSFÄHIG",
   "nodes": [
     {
       "id": "telegram-trigger",
@@ -8,7 +8,9 @@
       "position": [240, 300],
       "parameters": {
         "updates": ["message", "edited_message"],
-        "additionalFields": {}
+        "additionalFields": {
+          "botToken": "AAE-96YtKrqq69tnPBHhhA_3yal72fgyles"
+        }
       }
     },
     {
@@ -478,7 +480,8 @@
         "chatId": "={{ $json.chat_id }}",
         "text": "={{ $json.final_response }}",
         "additionalFields": {
-          "parse_mode": "Markdown"
+          "parse_mode": "Markdown",
+          "botToken": "AAE-96YtKrqq69tnPBHhhA_3yal72fgyles"
         }
       }
     },
@@ -492,7 +495,8 @@
         "chatId": "={{ $('telegram-trigger').item.json.message.chat.id }}",
         "text": "❌ **Fehler aufgetreten**\\n\\n🔧 **Problem:** Verarbeitung fehlgeschlagen\\n💡 **Lösung:** Versuche es erneut oder kontaktiere Support\\n\\n🔄 **Status:** System läuft weiter",
         "additionalFields": {
-          "parse_mode": "Markdown"
+          "parse_mode": "Markdown",
+          "botToken": "AAE-96YtKrqq69tnPBHhhA_3yal72fgyles"
         }
       }
     }
