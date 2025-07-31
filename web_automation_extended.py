@@ -45,6 +45,13 @@ import io
 import tempfile
 import re
 from difflib import get_close_matches
+import sqlite3
+import json
+import pickle
+from datetime import datetime, timedelta
+import threading
+import queue
+import uuid
 
 # Logging konfigurieren
 logging.basicConfig(level=logging.INFO)
@@ -618,12 +625,17 @@ class ExtendedSocialMediaAutomation:
                 'confidence': 0.0
             }
 
-    def understand_natural_language(self, text):
-        """Natürliche Sprache verstehen - Kostenlos, keine API-Keys nötig"""
+    def understand_natural_language(self, text, user_id=None):
+        """Natürliche Sprache verstehen mit Kontext-Bewusstsein - Kostenlos, keine API-Keys nötig"""
         try:
             text = text.lower().strip()
             
-            # Intention erkennen
+            # Benutzer-Kontext abrufen
+            user_context = {}
+            if user_id:
+                user_context = ki_memory.get_user_context(user_id)
+            
+            # Intention erkennen mit Kontext-Verbesserung
             intentions = {
                 'video': ['video', 'avatar', 'sprechen', 'sprech', 'film', 'bewegtbild'],
                 'photo': ['foto', 'bild', 'photo', 'image', 'picture'],
@@ -636,12 +648,16 @@ class ExtendedSocialMediaAutomation:
                 'chart': ['chart', 'diagramm', 'grafik', 'statistik'],
                 'shorten': ['kürzen', 'shorten', 'url', 'link'],
                 'markdown': ['markdown', 'text', 'formatieren'],
-                'help': ['hilfe', 'help', 'was', 'kannst', 'du', 'machen']
+                'help': ['hilfe', 'help', 'was', 'kannst', 'du', 'machen'],
+                'memory': ['erinnerung', 'gedächtnis', 'memory', 'was', 'haben', 'wir', 'gesprochen'],
+                'research': ['recherche', 'research', 'umfassend', 'detailliert', 'analyse'],
+                'creative': ['kreativ', 'creative', 'erstellen', 'generieren', 'neu']
             }
             
             detected_intention = None
             confidence = 0.0
             
+            # Basis-Intention erkennen
             for intention, keywords in intentions.items():
                 for keyword in keywords:
                     if keyword in text:
@@ -651,7 +667,16 @@ class ExtendedSocialMediaAutomation:
                 if detected_intention:
                     break
             
-            # Parameter extrahieren
+            # Kontext-basierte Verbesserung
+            if user_context and user_context.get('frequent_intentions'):
+                frequent_intentions = user_context['frequent_intentions']
+                for intention, count in frequent_intentions.items():
+                    if count > 2 and any(keyword in text for keyword in intentions.get(intention, [])):
+                        detected_intention = intention
+                        confidence = min(0.95, confidence + 0.1)
+                        break
+            
+            # Parameter extrahieren mit Kontext
             params = {}
             
             if detected_intention == 'search':
@@ -662,13 +687,21 @@ class ExtendedSocialMediaAutomation:
                         params['engine'] = engine
                         break
                 
-                # Query extrahieren (alles nach "suche", "finde", etc.)
+                # Query extrahieren
                 search_words = ['suche', 'finde', 'search', 'google', 'bing', 'youtube']
                 for word in search_words:
                     if word in text:
                         query_start = text.find(word) + len(word)
                         params['query'] = text[query_start:].strip()
                         break
+                
+                # Kontext-basierte Query-Verbesserung
+                if user_context and not params.get('query'):
+                    recent_topics = user_context.get('recent_conversations', [])
+                    if recent_topics:
+                        last_topic = recent_topics[-1].get('content', '')
+                        if last_topic:
+                            params['query'] = f"{last_topic} {text}"
             
             elif detected_intention == 'weather':
                 # Stadt extrahieren
@@ -678,6 +711,31 @@ class ExtendedSocialMediaAutomation:
                         city_start = text.find(word) + len(word)
                         params['city'] = text[city_start:].strip()
                         break
+                
+                # Kontext-basierte Stadt-Verbesserung
+                if user_context and not params.get('city'):
+                    important_memories = user_context.get('important_memories', [])
+                    for memory in important_memories:
+                        if memory.get('type') == 'location':
+                            params['city'] = memory.get('data', {}).get('city', 'Berlin')
+                            break
+            
+            elif detected_intention == 'memory':
+                # Spezifische Erinnerung abrufen
+                if user_context:
+                    params['context'] = user_context
+                    params['request_type'] = 'memory_query'
+            
+            elif detected_intention == 'research':
+                # Umfassende Recherche
+                params['sources'] = ['google', 'bing', 'news', 'rss']
+                params['depth'] = 'comprehensive'
+                params['query'] = text.replace('recherche', '').replace('research', '').strip()
+            
+            elif detected_intention == 'creative':
+                # Kreative Aufgaben
+                params['style'] = 'creative'
+                params['content'] = text.replace('kreativ', '').replace('creative', '').strip()
             
             elif detected_intention in ['video', 'photo', 'scrape', 'rss', 'qr', 'chart', 'shorten', 'markdown']:
                 # Parameter nach dem Befehl extrahieren
@@ -691,10 +749,12 @@ class ExtendedSocialMediaAutomation:
                 'intention': detected_intention,
                 'confidence': confidence,
                 'original_text': text,
-                'parameters': params
+                'parameters': params,
+                'context_used': bool(user_context),
+                'user_context': user_context if user_id else None
             }
             
-            logger.info(f"Natürliche Sprache verstanden: {detected_intention} mit {confidence} Konfidenz")
+            logger.info(f"Natürliche Sprache verstanden: {detected_intention} mit {confidence} Konfidenz (Kontext: {bool(user_context)})")
             return result
             
         except Exception as e:
@@ -704,29 +764,86 @@ class ExtendedSocialMediaAutomation:
                 'confidence': 0.0,
                 'original_text': text,
                 'parameters': {},
+                'context_used': False,
                 'error': str(e)
             }
 
-    def generate_smart_response(self, intention, params, original_text):
-        """Intelligente Antwort generieren - Kostenlos, keine API-Keys nötig"""
+    def generate_smart_response(self, intention, params, original_text, user_context=None):
+        """Intelligente Antwort generieren mit Kontext-Bewusstsein - Kostenlos, keine API-Keys nötig"""
         try:
-            responses = {
+            # Kontext-basierte Antworten
+            context_aware_responses = {
                 'video': {
                     'template': "🎬 Ich erstelle ein Avatar-Video für dich!\n\n📝 Text: {content}\n✅ Verarbeite mit ElevenLabs + D-ID...",
+                    'context_template': "🎬 Ich erstelle ein Avatar-Video für dich!\n\n📝 Text: {content}\n💭 Basierend auf unserem Gespräch über {context_topic}\n✅ Verarbeite mit ElevenLabs + D-ID...",
                     'action': 'create_video'
                 },
                 'photo': {
                     'template': "📸 Ich suche ein passendes Foto für dich!\n\n🔍 Beschreibung: {content}\n✅ Verarbeite mit Unsplash...",
+                    'context_template': "📸 Ich suche ein passendes Foto für dich!\n\n🔍 Beschreibung: {content}\n💭 Passend zu deinem Interesse an {context_topic}\n✅ Verarbeite mit Unsplash...",
                     'action': 'get_photo'
                 },
                 'search': {
                     'template': "🔍 Ich suche das für dich!\n\n🔎 Suchmaschine: {engine}\n📋 Query: {query}\n✅ Führe Suche durch...",
+                    'context_template': "🔍 Ich suche das für dich!\n\n🔎 Suchmaschine: {engine}\n📋 Query: {query}\n💭 Erweitere deine Recherche zu {context_topic}\n✅ Führe umfassende Suche durch...",
                     'action': 'perform_search'
                 },
                 'weather': {
                     'template': "🌤️ Ich schaue nach dem Wetter für dich!\n\n🏙️ Stadt: {city}\n✅ Hole Wetterdaten...",
+                    'context_template': "🌤️ Ich schaue nach dem Wetter für dich!\n\n🏙️ Stadt: {city}\n💭 Wie gewohnt für deine {context_topic} Aktivitäten\n✅ Hole Wetterdaten...",
                     'action': 'get_weather'
                 },
+                'memory': {
+                    'template': "🧠 Hier ist dein persönliches Gedächtnis:\n\n📊 **Konversationen:** {conversation_count}\n🎯 **Häufige Themen:** {frequent_topics}\n💾 **Wichtige Erinnerungen:** {important_count}\n\n📝 **Letzte Gespräche:**\n{recent_conversations}",
+                    'action': 'show_memory'
+                },
+                'research': {
+                    'template': "🔬 Ich starte eine umfassende Recherche!\n\n📋 Thema: {query}\n🌐 Quellen: {sources}\n📊 Tiefe: {depth}\n✅ Starte Multi-Agent-Recherche...",
+                    'action': 'start_research'
+                },
+                'creative': {
+                    'template': "🎨 Ich erstelle etwas Kreatives für dich!\n\n📝 Thema: {content}\n🎭 Stil: {style}\n✅ Starte Creative-Agent...",
+                    'action': 'start_creative'
+                },
+                'help': {
+                    'template': """🤖 Ich bin dein intelligenter Assistent mit Gedächtnis!
+
+🎯 **Was ich kann:**
+• 🎬 Avatar Videos erstellen
+• 📸 Fotos suchen und generieren
+• 🔍 In Suchmaschinen suchen
+• 🌤️ Wetter abrufen
+• 📰 News lesen
+• 🌐 Websites scrapen
+• 📰 RSS Feeds lesen
+• 📱 QR Codes erstellen
+• 📊 Diagramme generieren
+• 🔗 URLs kürzen
+• 📝 Markdown erstellen
+• 🧠 **Gedächtnis & Kontext**
+• 🔬 **Umfassende Recherche**
+• 🎨 **Kreative Aufgaben**
+
+💬 **Sprich einfach mit mir:**
+"Erstelle ein Video über KI"
+"Suche nach Python Tutorials"
+"Wie ist das Wetter in Berlin?"
+"Zeig mir die neuesten Nachrichten"
+"Was haben wir letzte Woche besprochen?"
+
+🎤 **Oder sende Sprachmemos!**
+
+🆓 **Alles kostenlos - keine API-Keys nötig!**""",
+                    'action': 'show_help'
+                },
+                'unknown': {
+                    'template': "🤔 Entschuldigung, ich habe dich nicht verstanden.\n\n💡 Tippe 'Hilfe' oder 'Help' für eine Übersicht meiner Fähigkeiten!",
+                    'action': 'unknown'
+                }
+            }
+            
+            # Standard-Antworten für andere Intentionen
+            standard_responses = {
                 'news': {
                     'template': "📰 Ich hole die neuesten Nachrichten für dich!\n\n✅ Lade News Headlines...",
                     'action': 'get_news'
@@ -754,48 +871,28 @@ class ExtendedSocialMediaAutomation:
                 'markdown': {
                     'template': "📝 Ich formatiere den Text für dich!\n\n📄 Inhalt: {content}\n✅ Generiere Markdown...",
                     'action': 'generate_markdown'
-                },
-                'help': {
-                    'template': """🤖 Ich bin dein intelligenter Assistent!
-
-🎯 **Was ich kann:**
-• 🎬 Avatar Videos erstellen
-• 📸 Fotos suchen und generieren
-• 🔍 In Suchmaschinen suchen
-• 🌤️ Wetter abrufen
-• 📰 News lesen
-• 🌐 Websites scrapen
-• 📰 RSS Feeds lesen
-• 📱 QR Codes erstellen
-• 📊 Diagramme generieren
-• 🔗 URLs kürzen
-• 📝 Markdown erstellen
-
-💬 **Sprich einfach mit mir:**
-"Erstelle ein Video über KI"
-"Suche nach Python Tutorials"
-"Wie ist das Wetter in Berlin?"
-"Zeig mir die neuesten Nachrichten"
-
-🎤 **Oder sende Sprachmemos!**
-
-🆓 **Alles kostenlos - keine API-Keys nötig!**""",
-                    'action': 'show_help'
-                },
-                'unknown': {
-                    'template': "🤔 Entschuldigung, ich habe dich nicht verstanden.\n\n💡 Tippe 'Hilfe' oder 'Help' für eine Übersicht meiner Fähigkeiten!",
-                    'action': 'unknown'
                 }
             }
             
-            response_info = responses.get(intention, responses['unknown'])
-            template = response_info['template']
+            # Antwort auswählen
+            response_info = context_aware_responses.get(intention, standard_responses.get(intention, context_aware_responses['unknown']))
+            
+            # Template auswählen (kontext-bewusst oder standard)
+            if user_context and intention in context_aware_responses and 'context_template' in context_aware_responses[intention]:
+                template = response_info['context_template']
+                # Kontext-Daten extrahieren
+                context_data = self.extract_context_data(user_context, intention)
+                params.update(context_data)
+            else:
+                template = response_info['template']
+            
             action = response_info['action']
             
             # Template mit Parametern füllen
             try:
                 formatted_response = template.format(**params)
-            except:
+            except Exception as e:
+                logger.warning(f"Template-Formatierung fehlgeschlagen: {e}")
                 formatted_response = template
             
             result = {
@@ -803,10 +900,11 @@ class ExtendedSocialMediaAutomation:
                 'action': action,
                 'intention': intention,
                 'parameters': params,
-                'confidence': 0.9 if intention != 'unknown' else 0.0
+                'confidence': 0.9 if intention != 'unknown' else 0.0,
+                'context_used': bool(user_context)
             }
             
-            logger.info(f"Intelligente Antwort generiert für {intention}")
+            logger.info(f"Intelligente Antwort generiert für {intention} (Kontext: {bool(user_context)})")
             return result
             
         except Exception as e:
@@ -818,6 +916,44 @@ class ExtendedSocialMediaAutomation:
                 'parameters': params,
                 'error': str(e)
             }
+    
+    def extract_context_data(self, user_context, intention):
+        """Kontext-Daten für Antworten extrahieren"""
+        try:
+            context_data = {}
+            
+            # Häufige Themen
+            frequent_intentions = user_context.get('frequent_intentions', {})
+            if frequent_intentions:
+                most_frequent = max(frequent_intentions.items(), key=lambda x: x[1])
+                context_data['context_topic'] = most_frequent[0]
+            
+            # Benutzerprofil
+            user_profile = user_context.get('user_profile', {})
+            if user_profile:
+                context_data['user_name'] = user_profile.get('name', 'User')
+                context_data['conversation_count'] = user_profile.get('conversation_count', 0)
+                context_data['favorite_topics'] = ', '.join(user_profile.get('favorite_topics', []))
+            
+            # Wichtige Erinnerungen
+            important_memories = user_context.get('important_memories', [])
+            context_data['important_count'] = len(important_memories)
+            
+            # Letzte Konversationen
+            recent_conversations = user_context.get('recent_conversations', [])
+            if recent_conversations:
+                context_data['recent_conversations'] = '\n'.join([
+                    f"• {conv.get('content', '')[:50]}..." 
+                    for conv in recent_conversations[-3:]
+                ])
+            else:
+                context_data['recent_conversations'] = "Keine kürzlichen Gespräche"
+            
+            return context_data
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Extrahieren von Kontext-Daten: {e}")
+            return {}
 
     # ==================== SOCIAL MEDIA LOGIN ====================
     
@@ -1180,6 +1316,483 @@ class ExtendedSocialMediaAutomation:
 app = Flask(__name__)
 automation = ExtendedSocialMediaAutomation()
 
+# ==================== KI-GEDÄCHTNISSYSTEM ====================
+
+class KIMemorySystem:
+    def __init__(self, db_path="ki_memory.db"):
+        """KI-Gedächtnissystem mit persistenter Datenbank"""
+        self.db_path = db_path
+        self.init_database()
+        self.context_cache = {}
+        self.agent_pool = {}
+        self.task_queue = queue.Queue()
+        self.start_background_workers()
+    
+    def init_database(self):
+        """Datenbank initialisieren"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Konversationsverlauf
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS conversations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    message_type TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    intention TEXT,
+                    parameters TEXT,
+                    response TEXT,
+                    confidence REAL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    context_hash TEXT
+                )
+            ''')
+            
+            # Benutzerprofile
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_profiles (
+                    user_id TEXT PRIMARY KEY,
+                    name TEXT,
+                    preferences TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_active DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    conversation_count INTEGER DEFAULT 0,
+                    favorite_topics TEXT
+                )
+            ''')
+            
+            # Kontext-Speicher
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS context_memory (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT NOT NULL,
+                    context_type TEXT NOT NULL,
+                    context_data TEXT NOT NULL,
+                    importance_score REAL DEFAULT 1.0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    access_count INTEGER DEFAULT 1
+                )
+            ''')
+            
+            # Agent-Aufgaben
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS agent_tasks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id TEXT UNIQUE NOT NULL,
+                    agent_type TEXT NOT NULL,
+                    user_id TEXT NOT NULL,
+                    task_data TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    priority INTEGER DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    completed_at DATETIME,
+                    result TEXT
+                )
+            ''')
+            
+            # Wissensdatenbank
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS knowledge_base (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    topic TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    source TEXT,
+                    confidence REAL DEFAULT 1.0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    usage_count INTEGER DEFAULT 0
+                )
+            ''')
+            
+            conn.commit()
+            conn.close()
+            logger.info("KI-Gedächtnissystem Datenbank initialisiert")
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Datenbank-Initialisierung: {e}")
+    
+    def save_conversation(self, user_id, session_id, message_type, content, 
+                         intention=None, parameters=None, response=None, confidence=None):
+        """Konversation speichern"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            context_hash = hashlib.md5(f"{user_id}{content}{intention}".encode()).hexdigest()
+            
+            cursor.execute('''
+                INSERT INTO conversations 
+                (user_id, session_id, message_type, content, intention, parameters, 
+                 response, confidence, context_hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (user_id, session_id, message_type, content, intention, 
+                  json.dumps(parameters) if parameters else None,
+                  response, confidence, context_hash))
+            
+            conn.commit()
+            conn.close()
+            
+            # Kontext-Cache aktualisieren
+            self.update_context_cache(user_id, content, intention, parameters)
+            
+            logger.info(f"Konversation für User {user_id} gespeichert")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Speichern der Konversation: {e}")
+            return False
+    
+    def get_conversation_history(self, user_id, limit=50, days_back=30):
+        """Konversationsverlauf abrufen"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cutoff_date = datetime.now() - timedelta(days=days_back)
+            
+            cursor.execute('''
+                SELECT * FROM conversations 
+                WHERE user_id = ? AND timestamp > ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            ''', (user_id, cutoff_date, limit))
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            conversations = []
+            for row in rows:
+                conversations.append({
+                    'id': row[0],
+                    'user_id': row[1],
+                    'session_id': row[2],
+                    'message_type': row[3],
+                    'content': row[4],
+                    'intention': row[5],
+                    'parameters': json.loads(row[6]) if row[6] else None,
+                    'response': row[7],
+                    'confidence': row[8],
+                    'timestamp': row[9],
+                    'context_hash': row[10]
+                })
+            
+            return conversations
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Abrufen des Konversationsverlaufs: {e}")
+            return []
+    
+    def update_context_cache(self, user_id, content, intention, parameters):
+        """Kontext-Cache aktualisieren"""
+        if user_id not in self.context_cache:
+            self.context_cache[user_id] = {
+                'recent_topics': [],
+                'frequent_intentions': {},
+                'user_preferences': {},
+                'conversation_context': []
+            }
+        
+        # Aktuelle Konversation zum Kontext hinzufügen
+        context_entry = {
+            'content': content,
+            'intention': intention,
+            'parameters': parameters,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        self.context_cache[user_id]['conversation_context'].append(context_entry)
+        
+        # Nur die letzten 10 Konversationen behalten
+        if len(self.context_cache[user_id]['conversation_context']) > 10:
+            self.context_cache[user_id]['conversation_context'] = \
+                self.context_cache[user_id]['conversation_context'][-10:]
+        
+        # Häufige Intentionen tracken
+        if intention:
+            if intention not in self.context_cache[user_id]['frequent_intentions']:
+                self.context_cache[user_id]['frequent_intentions'][intention] = 0
+            self.context_cache[user_id]['frequent_intentions'][intention] += 1
+    
+    def get_user_context(self, user_id):
+        """Benutzer-Kontext abrufen"""
+        try:
+            # Cache-Kontext
+            cache_context = self.context_cache.get(user_id, {})
+            
+            # Datenbank-Kontext
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Benutzerprofil
+            cursor.execute('SELECT * FROM user_profiles WHERE user_id = ?', (user_id,))
+            profile = cursor.fetchone()
+            
+            # Wichtige Kontext-Daten
+            cursor.execute('''
+                SELECT * FROM context_memory 
+                WHERE user_id = ? 
+                ORDER BY importance_score DESC, last_accessed DESC
+                LIMIT 20
+            ''', (user_id,))
+            
+            context_memories = cursor.fetchall()
+            conn.close()
+            
+            # Kontext zusammenstellen
+            context = {
+                'user_profile': {
+                    'name': profile[1] if profile else None,
+                    'preferences': json.loads(profile[2]) if profile and profile[2] else {},
+                    'conversation_count': profile[5] if profile else 0,
+                    'favorite_topics': json.loads(profile[6]) if profile and profile[6] else []
+                } if profile else {},
+                'recent_conversations': cache_context.get('conversation_context', []),
+                'frequent_intentions': cache_context.get('frequent_intentions', {}),
+                'important_memories': [
+                    {
+                        'type': row[2],
+                        'data': json.loads(row[3]),
+                        'importance': row[4],
+                        'last_accessed': row[6]
+                    } for row in context_memories
+                ]
+            }
+            
+            return context
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Abrufen des Benutzer-Kontexts: {e}")
+            return {}
+    
+    def save_important_memory(self, user_id, context_type, context_data, importance_score=1.0):
+        """Wichtige Erinnerung speichern"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO context_memory 
+                (user_id, context_type, context_data, importance_score, last_accessed)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (user_id, context_type, json.dumps(context_data), importance_score))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Wichtige Erinnerung für User {user_id} gespeichert")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Speichern wichtiger Erinnerung: {e}")
+            return False
+    
+    def start_background_workers(self):
+        """Hintergrund-Worker für Multi-Agent-System starten"""
+        self.worker_thread = threading.Thread(target=self.background_worker, daemon=True)
+        self.worker_thread.start()
+        logger.info("Hintergrund-Worker für Multi-Agent-System gestartet")
+    
+    def background_worker(self):
+        """Hintergrund-Worker für Agent-Aufgaben"""
+        while True:
+            try:
+                # Aufgaben aus der Queue holen
+                task = self.task_queue.get(timeout=1)
+                if task:
+                    self.process_agent_task(task)
+                self.task_queue.task_done()
+            except queue.Empty:
+                continue
+            except Exception as e:
+                logger.error(f"Fehler im Hintergrund-Worker: {e}")
+    
+    def process_agent_task(self, task):
+        """Agent-Aufgabe verarbeiten"""
+        try:
+            task_id = task.get('task_id')
+            agent_type = task.get('agent_type')
+            user_id = task.get('user_id')
+            task_data = task.get('task_data')
+            
+            # Aufgabe in Datenbank speichern
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO agent_tasks 
+                (task_id, agent_type, user_id, task_data, status)
+                VALUES (?, ?, ?, ?, 'processing')
+            ''', (task_id, agent_type, user_id, json.dumps(task_data)))
+            
+            conn.commit()
+            conn.close()
+            
+            # Agent-spezifische Verarbeitung
+            result = self.execute_agent_task(agent_type, task_data, user_id)
+            
+            # Ergebnis speichern
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE agent_tasks 
+                SET status = ?, result = ?, completed_at = CURRENT_TIMESTAMP
+                WHERE task_id = ?
+            ''', ('completed', json.dumps(result), task_id))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Agent-Aufgabe {task_id} abgeschlossen")
+            
+        except Exception as e:
+            logger.error(f"Fehler bei Agent-Aufgabe: {e}")
+    
+    def execute_agent_task(self, agent_type, task_data, user_id):
+        """Agent-Aufgabe ausführen"""
+        try:
+            if agent_type == 'research':
+                return self.research_agent(task_data, user_id)
+            elif agent_type == 'creative':
+                return self.creative_agent(task_data, user_id)
+            elif agent_type == 'analytics':
+                return self.analytics_agent(task_data, user_id)
+            elif agent_type == 'communication':
+                return self.communication_agent(task_data, user_id)
+            else:
+                return {'error': f'Unbekannter Agent-Typ: {agent_type}'}
+                
+        except Exception as e:
+            logger.error(f"Fehler bei Agent-Aufgabe {agent_type}: {e}")
+            return {'error': str(e)}
+    
+    def research_agent(self, task_data, user_id):
+        """Forschungs-Agent für umfassende Recherche"""
+        try:
+            query = task_data.get('query', '')
+            sources = task_data.get('sources', ['google', 'bing', 'news'])
+            
+            results = {}
+            for source in sources:
+                if source == 'google':
+                    results['google'] = self.search_google(query, limit=5)
+                elif source == 'bing':
+                    results['bing'] = self.search_bing(query, limit=5)
+                elif source == 'news':
+                    results['news'] = self.get_news_headlines('general', limit=5)
+            
+            # Ergebnisse zusammenfassen
+            summary = self.summarize_research_results(results)
+            
+            return {
+                'query': query,
+                'sources': sources,
+                'results': results,
+                'summary': summary,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler im Research-Agent: {e}")
+            return {'error': str(e)}
+    
+    def creative_agent(self, task_data, user_id):
+        """Kreativ-Agent für Content-Erstellung"""
+        try:
+            content_type = task_data.get('type', 'text')
+            topic = task_data.get('topic', '')
+            style = task_data.get('style', 'professional')
+            
+            if content_type == 'text':
+                content = self.generate_creative_text(topic, style)
+            elif content_type == 'image':
+                content = self.generate_creative_image(topic, style)
+            elif content_type == 'video':
+                content = self.generate_creative_video(topic, style)
+            
+            return {
+                'type': content_type,
+                'topic': topic,
+                'style': style,
+                'content': content,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler im Creative-Agent: {e}")
+            return {'error': str(e)}
+    
+    def analytics_agent(self, task_data, user_id):
+        """Analytics-Agent für Datenanalyse"""
+        try:
+            data = task_data.get('data', {})
+            analysis_type = task_data.get('analysis_type', 'basic')
+            
+            if analysis_type == 'basic':
+                result = self.basic_data_analysis(data)
+            elif analysis_type == 'trend':
+                result = self.trend_analysis(data)
+            elif analysis_type == 'prediction':
+                result = self.prediction_analysis(data)
+            
+            return {
+                'analysis_type': analysis_type,
+                'data': data,
+                'result': result,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler im Analytics-Agent: {e}")
+            return {'error': str(e)}
+    
+    def communication_agent(self, task_data, user_id):
+        """Kommunikations-Agent für optimale Antworten"""
+        try:
+            message = task_data.get('message', '')
+            context = self.get_user_context(user_id)
+            
+            # Kontext-basierte Antwort generieren
+            response = self.generate_contextual_response(message, context)
+            
+            return {
+                'original_message': message,
+                'context_used': context,
+                'response': response,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Fehler im Communication-Agent: {e}")
+            return {'error': str(e)}
+    
+    def add_agent_task(self, agent_type, user_id, task_data, priority=1):
+        """Agent-Aufgabe zur Queue hinzufügen"""
+        try:
+            task_id = str(uuid.uuid4())
+            task = {
+                'task_id': task_id,
+                'agent_type': agent_type,
+                'user_id': user_id,
+                'task_data': task_data,
+                'priority': priority
+            }
+            
+            self.task_queue.put(task)
+            logger.info(f"Agent-Aufgabe {task_id} zur Queue hinzugefügt")
+            return task_id
+            
+        except Exception as e:
+            logger.error(f"Fehler beim Hinzufügen der Agent-Aufgabe: {e}")
+            return None
+
+# KI-Gedächtnissystem initialisieren
+ki_memory = KIMemorySystem()
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health Check Endpoint"""
@@ -1201,7 +1814,11 @@ def health_check():
             'youtube_search': 'available',
             'voice_processing': 'available',
             'natural_language': 'available',
-            'ai_conversation': 'available'
+            'ai_conversation': 'available',
+            'memory_system': 'available',
+            'context_awareness': 'available',
+            'multi_agent_system': 'available',
+            'persistent_storage': 'available'
         }
     })
 
@@ -1409,31 +2026,171 @@ def generate_response():
 
 @app.route('/ai/conversation', methods=['POST'])
 def handle_conversation():
-    """Complete Conversation Handler Endpoint"""
+    """Complete Conversation Handler Endpoint mit Gedächtnis"""
     data = request.get_json()
     text = data.get('text')
+    user_id = data.get('user_id', 'default_user')
+    session_id = data.get('session_id', str(uuid.uuid4()))
     
     if not text:
         return jsonify({'error': 'text required'}), 400
     
-    # 1. Natürliche Sprache verstehen
-    understanding = automation.understand_natural_language(text)
+    try:
+        # 1. Benutzer-Kontext abrufen
+        user_context = ki_memory.get_user_context(user_id)
+        
+        # 2. Natürliche Sprache verstehen mit Kontext
+        understanding = automation.understand_natural_language(text, user_id)
+        
+        # 3. Intelligente Antwort generieren mit Kontext
+        response = automation.generate_smart_response(
+            understanding['intention'],
+            understanding['parameters'],
+            understanding['original_text'],
+            user_context
+        )
+        
+        # 4. Konversation speichern
+        ki_memory.save_conversation(
+            user_id=user_id,
+            session_id=session_id,
+            message_type='text',
+            content=text,
+            intention=understanding['intention'],
+            parameters=understanding['parameters'],
+            response=response['response'],
+            confidence=understanding['confidence']
+        )
+        
+        # 5. Wichtige Erinnerungen speichern (bei hoher Konfidenz)
+        if understanding['confidence'] > 0.8:
+            ki_memory.save_important_memory(
+                user_id=user_id,
+                context_type='conversation',
+                context_data={
+                    'intention': understanding['intention'],
+                    'content': text,
+                    'parameters': understanding['parameters']
+                },
+                importance_score=understanding['confidence']
+            )
+        
+        # 6. Agent-Aufgaben starten (bei komplexen Anfragen)
+        if understanding['intention'] in ['research', 'creative', 'analytics']:
+            task_id = ki_memory.add_agent_task(
+                agent_type=understanding['intention'],
+                user_id=user_id,
+                task_data=understanding['parameters']
+            )
+            response['agent_task_id'] = task_id
+        
+        # 7. Kombiniertes Ergebnis zurückgeben
+        result = {
+            'understanding': understanding,
+            'response': response,
+            'user_context': {
+                'has_context': bool(user_context),
+                'conversation_count': user_context.get('user_profile', {}).get('conversation_count', 0) if user_context else 0
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Fehler bei Konversation: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/memory/history', methods=['GET'])
+def get_memory_history():
+    """Konversationsverlauf abrufen"""
+    user_id = request.args.get('user_id', 'default_user')
+    limit = int(request.args.get('limit', 50))
+    days_back = int(request.args.get('days_back', 30))
     
-    # 2. Intelligente Antwort generieren
-    response = automation.generate_smart_response(
-        understanding['intention'],
-        understanding['parameters'],
-        understanding['original_text']
-    )
+    try:
+        history = ki_memory.get_conversation_history(user_id, limit, days_back)
+        return jsonify({
+            'user_id': user_id,
+            'history': history,
+            'total': len(history)
+        })
+    except Exception as e:
+        logger.error(f"Fehler beim Abrufen des Verlaufs: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/memory/context', methods=['GET'])
+def get_user_context():
+    """Benutzer-Kontext abrufen"""
+    user_id = request.args.get('user_id', 'default_user')
     
-    # 3. Kombiniertes Ergebnis zurückgeben
-    result = {
-        'understanding': understanding,
-        'response': response,
-        'timestamp': datetime.now().isoformat()
-    }
+    try:
+        context = ki_memory.get_user_context(user_id)
+        return jsonify({
+            'user_id': user_id,
+            'context': context
+        })
+    except Exception as e:
+        logger.error(f"Fehler beim Abrufen des Kontexts: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/memory/save', methods=['POST'])
+def save_memory():
+    """Wichtige Erinnerung speichern"""
+    data = request.get_json()
+    user_id = data.get('user_id', 'default_user')
+    context_type = data.get('context_type')
+    context_data = data.get('context_data', {})
+    importance_score = data.get('importance_score', 1.0)
     
-    return jsonify(result)
+    if not context_type:
+        return jsonify({'error': 'context_type required'}), 400
+    
+    try:
+        success = ki_memory.save_important_memory(
+            user_id=user_id,
+            context_type=context_type,
+            context_data=context_data,
+            importance_score=importance_score
+        )
+        
+        return jsonify({
+            'success': success,
+            'user_id': user_id,
+            'context_type': context_type
+        })
+    except Exception as e:
+        logger.error(f"Fehler beim Speichern der Erinnerung: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/agents/task', methods=['POST'])
+def add_agent_task():
+    """Agent-Aufgabe hinzufügen"""
+    data = request.get_json()
+    agent_type = data.get('agent_type')
+    user_id = data.get('user_id', 'default_user')
+    task_data = data.get('task_data', {})
+    priority = data.get('priority', 1)
+    
+    if not agent_type:
+        return jsonify({'error': 'agent_type required'}), 400
+    
+    try:
+        task_id = ki_memory.add_agent_task(
+            agent_type=agent_type,
+            user_id=user_id,
+            task_data=task_data,
+            priority=priority
+        )
+        
+        return jsonify({
+            'task_id': task_id,
+            'agent_type': agent_type,
+            'status': 'queued'
+        })
+    except Exception as e:
+        logger.error(f"Fehler beim Hinzufügen der Agent-Aufgabe: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/login', methods=['POST'])
 def login():
